@@ -66,9 +66,50 @@ function createSessionGuard({ store, config }) {
         req.flash('error', 'Guardian accounts must turn on two-step verification before continuing.');
         return res.redirect('/settings/security');
       }
+      // The support operator always needs it, in every environment.
+      if (user.role === 'operator' && !user.mfaEnabled) {
+        req.flash('error', 'The support account must turn on two-step verification before continuing.');
+        return res.redirect('/settings/security');
+      }
+      // A support reset of two-step verification asks the owner to set it up
+      // again (only those who had it on are flagged).
+      if (user.mustEnrollMfa && !user.mfaEnabled) {
+        req.flash('error', 'Your two-step verification was reset. Please set it up again before continuing.');
+        return res.redirect('/settings/security');
+      }
     }
     return next();
   };
+}
+
+// Everything the support operator may reach. Anything else (photos, albums,
+// admin, comments, data export) is refused, so a new family route is closed
+// to the operator by default instead of needing its own check.
+const OPERATOR_ALLOW = [
+  /^\/support(\/|$)/,
+  /^\/login(\/mfa)?$/,
+  /^\/logout$/,
+  /^\/reauth$/,
+  /^\/settings$/,
+  /^\/settings\/security(\/|$)/,
+  /^\/settings\/(password|profile|theme)$/,
+  /^\/privacy(\/accept)?$/,
+];
+
+/**
+ * Least privilege for the support operator. Mount after the template locals
+ * are set (it renders the error page). Home goes to the Support page.
+ */
+function operatorScope(req, res, next) {
+  if (!req.user || req.user.role !== 'operator' || OPERATOR_ALLOW.some((re) => re.test(req.path))) {
+    return next();
+  }
+  if (req.method === 'GET' && (req.path === '/' || req.path === '/home')) {
+    return res.redirect('/support');
+  }
+  return res
+    .status(403)
+    .render('error', { title: 'Not allowed', message: 'The support account cannot open family pages.' });
 }
 
 /**
@@ -115,4 +156,4 @@ function safeInternalPath(p, fallback) {
   return typeof p === 'string' && /^\/(?!\/)[\w\-./?=&%#]*$/.test(p) ? p : fallback;
 }
 
-module.exports = { createSessionGuard, createRequireStepUp, safeReturnPath, safeInternalPath };
+module.exports = { createSessionGuard, createRequireStepUp, operatorScope, safeReturnPath, safeInternalPath };

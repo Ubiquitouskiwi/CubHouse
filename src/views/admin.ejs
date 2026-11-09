@@ -144,7 +144,14 @@
             <% if (can.manageMembers) { %>
               <td>
                 <% if (u.id !== currentUserId) { %>
-                  <% if (!u.disabled) { %>
+                  <% if (u.role === 'operator' && !u.disabled) { %>
+                    <%# The site developer's support account: guardians can cut it off; everything else is on the server. %>
+                    <form method="post" action="/admin/members/<%= u.id %>/remove" class="inline-form"
+                      data-confirm="Remove the support account <%= u.displayName %>? The developer can no longer unlock or reset accounts.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="link-button danger">Remove and revoke</button>
+                    </form>
+                  <% } else if (!u.disabled) { %>
                     <form method="post" action="/admin/members/<%= u.id %>/remove" class="inline-form"
                       data-confirm="Remove <%= u.displayName %>? They are signed out everywhere immediately and lose all access.">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

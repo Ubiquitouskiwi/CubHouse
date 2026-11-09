@@ -177,7 +177,9 @@ module.exports = function adminRoutes(ctx) {
   // it (see actions.issueResetCode).
   router.post('/admin/members/:id/reset-signin', requireParent, requireStepUp, async (req, res) => {
     const target = await store.findUserById(req.params.id);
-    if (!target || target.disabled || target.id === req.user.id) {
+    // The support account is managed on the server, never reset from here
+    // (a reset would hand its powers to whoever issued the code).
+    if (!target || target.disabled || target.id === req.user.id || target.role === ROLES.OPERATOR) {
       req.flash('error', 'A reset code cannot be issued for that account here.');
       return res.redirect('/admin');
     }
@@ -224,7 +226,8 @@ module.exports = function adminRoutes(ctx) {
     const target = await store.findUserById(req.params.id);
     const role = str(req.body.role, { field: 'role' });
     const allowed = config.isProduction ? [ROLES.PARENT, ROLES.USER] : [ROLES.PARENT, ROLES.DEV, ROLES.USER];
-    if (!target || !allowed.includes(role) || target.id === req.user.id) {
+    // The operator role is never granted or changed from the web.
+    if (!target || !allowed.includes(role) || target.id === req.user.id || target.role === ROLES.OPERATOR) {
       req.flash('error', 'That role change is not allowed.');
       return res.redirect('/admin');
     }

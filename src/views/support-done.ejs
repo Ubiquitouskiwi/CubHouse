@@ -1,0 +1,20 @@
+<%- include('partials/header') %>
+
+<section class="card auth-card">
+  <h1><%= action.label %>: done</h1>
+  <div class="alert alert-success" role="status">
+    <p><%= action.label %> for <%= account.displayName %> is done. They and the guardians were emailed.</p>
+  </div>
+  <% if (tempPassword) { %>
+    <p><strong>Temporary password</strong> (shown only on this page, write it down now):</p>
+    <p class="setup-key"><code><%= tempPassword %></code></p>
+    <p class="muted">
+      Read it to <%= account.displayName %> by phone or in person. Never send it by email or text.
+      It works until <%= expiresAt.replace('T', ' ').slice(0, 16) %> UTC, and they must choose a new
+      password as soon as they sign in. If it is lost, reset the password again.
+    </p>
+  <% } %>
+  <p><a href="/support">Back to Support</a></p>
+</section>
+
+<%- include('partials/footer') %>

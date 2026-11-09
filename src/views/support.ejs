@@ -1,0 +1,67 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Support</h1>
+  <p class="muted">
+    Sign-in state for every account, for helping someone who is locked out.
+    Before you change anything, make sure it is really them: call them on a
+    number you already know. Each action asks for your authenticator code,
+    is emailed to the person and the guardians, and is recorded in the
+    family's audit trail.
+  </p>
+  <p class="muted">This page shows no photos, albums or family content, and the support account cannot open them.</p>
+</section>
+
+<section class="card">
+  <h2>Accounts</h2>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Email</th>
+          <th scope="col">Role</th>
+          <th scope="col">Sign-in</th>
+          <th scope="col">Failed attempts</th>
+          <th scope="col">Two-step</th>
+          <th scope="col">Last sign-in</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% accounts.forEach(function (a) { %>
+          <tr>
+            <td><%= a.displayName %></td>
+            <td><%= a.maskedEmail %></td>
+            <td><%= a.roleLabel %></td>
+            <td>
+              <% if (a.disabled) { %><span class="badge badge-locked">Removed</span>
+              <% } else if (a.locked) { %><span class="badge badge-locked">Locked</span>
+              <% } else { %><span class="badge badge-open">OK</span><% } %>
+              <% if (a.mustChangePassword) { %><span class="badge badge-hidden">Must change password</span><% } %>
+            </td>
+            <td><%= a.failedAttempts %></td>
+            <td><%= a.mfaEnabled ? 'On' : 'Off' %></td>
+            <td><%= a.lastLoginAt ? a.lastLoginAt.replace('T', ' ').slice(0, 16) + ' UTC' : 'Not recorded' %></td>
+            <td>
+              <% if (a.id === currentUserId) { %>
+                <span class="muted">You</span>
+              <% } else if (a.role === 'operator') { %>
+                <span class="muted">Operator (managed on the server)</span>
+              <% } else if (a.disabled) { %>
+                <span class="muted">Guardians restore removed accounts</span>
+              <% } else { %>
+                <% Object.keys(actions).forEach(function (key) { %>
+                  <div><a class="link-button" href="/support/accounts/<%= a.id %>/<%= key %>"
+                    aria-label="<%= actions[key].label %> for <%= a.displayName %>"><%= actions[key].label %></a></div>
+                <% }); %>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

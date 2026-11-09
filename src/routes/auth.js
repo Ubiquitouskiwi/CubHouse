@@ -11,6 +11,7 @@ const totp = require('../security/totp');
 const { hashSecret, normalizeCode, isResetCodeShape, isRecoveryCodeShape } = require('../security/recovery');
 const { audit } = require('../audit');
 const { str, validateEmail, validateDisplayName } = require('../validation');
+const { supportNoticeText, tempPasswordExpired } = require('../services/support');
 
 const GENERIC_LOGIN_ERROR = 'That email and password did not match. Please try again.';
 const GENERIC_CODE_ERROR =
@@ -67,10 +68,19 @@ module.exports = function authRoutes(ctx) {
 
   async function finishLogin(req, res, next, user) {
     await noteDevice(req, user);
+    // Support actions on this account are shown once, at the next sign-in.
+    const notices = user.supportNotices || [];
+    await store.updateUser(user.id, {
+      lastLoginAt: new Date().toISOString(),
+      ...(notices.length ? { supportNotices: [] } : {}),
+    });
     await audit(store, req, 'auth.login', { targetType: 'user', targetId: user.id });
     establishSession(req, user, (err) => {
       if (err) {
         return next(err);
+      }
+      for (const notice of notices) {
+        req.flash('error', supportNoticeText(notice));
       }
       return res.redirect('/home');
     });
@@ -96,7 +106,7 @@ module.exports = function authRoutes(ctx) {
     }
 
     const user = await checkCredentials(store, email, password);
-    if (!user || user.disabled) {
+    if (!user || user.disabled || tempPasswordExpired(user)) {
       const nowLocked = await registerFailure(store, keys, config.security);
       // Looked up only for the audit trail and owner notification; the
       // response is identical whether or not the account exists.
@@ -270,6 +280,7 @@ module.exports = function authRoutes(ctx) {
     await store.updateUser(user.id, {
       passwordHash: await hashPassword(password),
       mustChangePassword: false,
+      tempPasswordExpiresAt: null,
       mfaEnabled: false,
       mfaSecretSealed: null,
       mfaLastCounter: -1,

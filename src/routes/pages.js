@@ -168,7 +168,11 @@ module.exports = function pageRoutes(ctx) {
       return res.redirect('/settings');
     }
 
-    await store.updateUser(user.id, { passwordHash: await hashPassword(nextPw), mustChangePassword: false });
+    await store.updateUser(user.id, {
+      passwordHash: await hashPassword(nextPw),
+      mustChangePassword: false,
+      tempPasswordExpiresAt: null,
+    });
     const bumped = await store.bumpSessionVersion(user.id);
     await audit(store, req, 'account.password_changed', { targetType: 'user', targetId: user.id });
     await notifier.notifyUser(user, {

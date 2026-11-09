@@ -47,8 +47,12 @@ numbers to the repository.
    one guardian from quietly taking over the other's account.
 3. After 24 hours, follow 1a step 4. Turn two-step verification back on
    right away (the site requires it for guardians) and save the new codes.
-4. If you are the ONLY guardian and have no recovery codes, there is no
-   in-app path. Whoever runs the server issues a code there:
+4. If you are the ONLY guardian and have no recovery codes, the site's
+   developer can help from the **Support** page, if a support operator
+   account exists (see "Support account" in the README): **Reset two-step
+   verification**, and **Reset password** if needed. Each needs their
+   authenticator code, is emailed to you, and is in the audit trail.
+   With no support account, whoever runs the server issues a code there:
 
    ```bash
    sudo -u family-photos bash -c 'set -a; . /etc/family-photos/app.env; set +a; cd /opt/family-photos; \

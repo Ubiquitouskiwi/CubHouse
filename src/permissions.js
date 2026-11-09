@@ -17,6 +17,13 @@
  *   USER is an invited family member: they view photos, build personal albums,
  *   and download only the photos a parent has allowed.
  *
+ *   OPERATOR is the site host's support account (the developer who runs the
+ *   server). It exists in production, is created only from the server CLI
+ *   (scripts/create-operator.js), must use two-step verification, and can
+ *   only reach the Support page: unlock an account, reset a password, reset
+ *   two-step verification. It sees no photos, albums, comments or family
+ *   settings, and no role on the site can grant it.
+ *
  * Security and privacy of photos is parent-controlled by design. When in doubt
  * about a photo capability, the answer is "no" unless the role is parent.
  */
@@ -25,6 +32,7 @@ const ROLES = Object.freeze({
   PARENT: 'parent',
   DEV: 'dev',
   USER: 'user',
+  OPERATOR: 'operator',
 });
 
 const ROLE_VALUES = Object.freeze(Object.values(ROLES));
@@ -34,6 +42,7 @@ const ROLE_LABELS = Object.freeze({
   [ROLES.PARENT]: 'Parent',
   [ROLES.DEV]: 'Developer',
   [ROLES.USER]: 'Family member',
+  [ROLES.OPERATOR]: 'Support operator',
 });
 
 function isValidRole(role) {
@@ -67,6 +76,8 @@ function portalCapabilities(role) {
     viewAccessCodes: isParent,
     // Dev may manage non-photo portal settings; it still cannot touch photos.
     manageSiteSettings: isParent || isDev,
+    // The Support page (account unlock and resets) is operator-only.
+    useSupportConsole: r === ROLES.OPERATOR,
   });
 }
 
@@ -164,6 +175,10 @@ function canViewPhoto(viewer, photo) {
   if (normalizeRole(viewer.role) === ROLES.PARENT) {
     return true;
   }
+  // The support operator never sees family content, whatever the audience.
+  if (viewer.role === ROLES.OPERATOR) {
+    return false;
+  }
   return isInPhotoAudience(viewer, photo);
 }
 
@@ -203,6 +218,21 @@ function photoCapabilities(viewer, photo) {
       view: true,
       download: true,
       addToAlbum: true,
+    });
+  }
+
+  // The support operator gets nothing at all, not even gallery access.
+  if (r === ROLES.OPERATOR) {
+    return Object.freeze({
+      upload: false,
+      contribute: false,
+      delete: false,
+      setPermissions: false,
+      share: false,
+      hide: false,
+      view: false,
+      download: false,
+      addToAlbum: false,
     });
   }
 

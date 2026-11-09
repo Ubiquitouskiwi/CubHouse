@@ -1,7 +1,7 @@
 'use strict';
 
 const { generateAccessCode } = require('../auth');
-const { isValidRole } = require('../permissions');
+const { isValidRole, ROLES } = require('../permissions');
 const { generateResetCode, hashSecret } = require('../security/recovery');
 
 /**
@@ -169,6 +169,11 @@ function createActions({ store, media, config, notifier }) {
     'user.setRole': async ({ userId, role }) => {
       if (!isValidRole(role)) {
         return { message: 'Unknown role.' };
+      }
+      // Last line of defense: the support role is created only on the server.
+      const current = await store.findUserById(userId);
+      if (role === ROLES.OPERATOR || (current && current.role === ROLES.OPERATOR)) {
+        return { message: 'The support account role is managed on the server.' };
       }
       const updated = await store.updateUser(userId, { role });
       if (updated) {

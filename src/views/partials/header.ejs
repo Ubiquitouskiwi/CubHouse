@@ -32,7 +32,9 @@
     <header class="site-header">
       <a class="brand" href="/home"><%= siteName %></a>
       <nav class="site-nav">
-        <% if (currentUser) { %>
+        <% if (currentUser && can.useSupportConsole) { %>
+          <a href="/support">Support</a>
+        <% } else if (currentUser) { %>
           <a href="/home">Home</a>
           <a href="/photos">Photos</a>
           <a href="/albums">Albums</a>

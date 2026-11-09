@@ -14,7 +14,7 @@ const { portalCapabilities, ROLE_LABELS } = require('./permissions');
 const { createSecurityHeaders, noStore } = require('./security/headers');
 const { createCsrf } = require('./security/csrf');
 const { createRateLimiters } = require('./security/rateLimiters');
-const { createSessionGuard, createRequireStepUp } = require('./security/sessionGuard');
+const { createSessionGuard, createRequireStepUp, operatorScope } = require('./security/sessionGuard');
 const { configFindings, storeFindings, enforce, assertNotDeployedDev } = require('./security/bootstrapChecks');
 const { createMediaService } = require('./media');
 const { createNotifier } = require('./notify');
@@ -29,6 +29,7 @@ const accountRoutes = require('./routes/account');
 const adminRoutes = require('./routes/admin');
 const photoRoutes = require('./routes/photos');
 const albumRoutes = require('./routes/albums');
+const supportRoutes = require('./routes/support');
 
 // Stylesheet cache-busting token, computed once at boot (not per request).
 const ASSET_VERSION = (() => {
@@ -154,8 +155,11 @@ async function buildApp(store, options = {}) {
   });
   // Nothing rendered by the app may be cached: it is all family content.
   app.use(noStore);
+  // The support operator reaches only the Support page and its own settings.
+  app.use(operatorScope);
 
   app.use('/', authRoutes(ctx));
+  app.use('/', supportRoutes(ctx));
   app.use('/', pageRoutes(ctx));
   app.use('/', accountRoutes(ctx));
   app.use('/', adminRoutes(ctx));

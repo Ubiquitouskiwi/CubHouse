@@ -29,11 +29,11 @@
         <button type="submit" class="ghost-button">Turn off</button>
       </form>
     <% } else { %>
-      <p class="muted">Guardian accounts always keep two-step verification on.</p>
+      <p class="muted"><%= user.role === 'operator' ? 'The support account always keeps' : 'Guardian accounts always keep' %> two-step verification on.</p>
     <% } %>
   <% } else { %>
     <% if (mfaRequired) { %>
-      <div class="alert alert-error"><p>Guardian accounts must turn this on before using the site.</p></div>
+      <div class="alert alert-error"><p><%= user.role === 'operator' ? 'The support account' : 'Guardian accounts' %> must turn this on before using the site.</p></div>
     <% } %>
     <p>
       Add <%= siteName %> to an authenticator app (for example the one built into
