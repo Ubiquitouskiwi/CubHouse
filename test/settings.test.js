@@ -126,3 +126,22 @@ test('guardians cannot self-delete (the archive is never left ownerless)', async
   await p.post('/settings/delete-account', { confirm: 'DELETE', password: PASSWORD });
   assert.ok(await env.store.findUserByEmail('parent@test.com'));
 });
+
+test('a must-change-password account can reach the settings page (no redirect loop)', async (t) => {
+  const env = await startApp();
+  t.after(env.close);
+  const { member } = await seedFamily(env);
+  await env.store.updateUser(member.id, { mustChangePassword: true });
+  const c = env.client();
+  await c.login(member.email);
+
+  const gated = await c.get('/home');
+  assert.equal(gated.status, 302);
+  assert.equal(gated.location, '/settings#password');
+
+  const page = await c.get('/settings');
+  assert.equal(page.status, 200, 'the gate must not redirect /settings to itself');
+
+  // Everything else stays gated until the password is changed.
+  assert.equal((await c.get('/photos')).location, '/settings#password');
+});

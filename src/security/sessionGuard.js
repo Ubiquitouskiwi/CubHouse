@@ -18,7 +18,16 @@
  * account flagged mustChangePassword (seeded accounts) must change it first.
  */
 
-const GATE_ALLOW = [/^\/logout$/, /^\/reauth$/, /^\/settings\/security(\/|$)/, /^\/settings\/password$/, /^\/privacy$/];
+// /settings itself must be allowed: the password gate redirects there (the
+// #password fragment never reaches the server), so leaving it out loops.
+const GATE_ALLOW = [
+  /^\/logout$/,
+  /^\/reauth$/,
+  /^\/settings$/,
+  /^\/settings\/security(\/|$)/,
+  /^\/settings\/password$/,
+  /^\/privacy$/,
+];
 
 function isAllowedDuringGate(path) {
   return GATE_ALLOW.some((re) => re.test(path));
