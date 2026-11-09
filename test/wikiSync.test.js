@@ -88,7 +88,7 @@ test('the tree has renamed pages, images, a sidebar in index order and a footer'
     ['Account-Recovery.md', 'FAQ.md', 'Home.md', 'Troubleshooting.md', '_Footer.md', '_Sidebar.md', 'img/a.png', 'img/sub/b.png']
   );
   assert.match(tree.get('Home.md'), /\[FAQ\]\(FAQ\), then \[Recovery\]\(Account-Recovery#top\)/);
-  assert.match(tree.get('FAQ.md'), new RegExp(`\\[r\\]\\(${BLOB.replace(/[./]/g, '\\$&')}/docs/RUNBOOK\\.md\\)`));
+  assert.match(tree.get('FAQ.md'), new RegExp(`\\[r\\]\\(${BLOB.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/docs/RUNBOOK\\.md\\)`));
   assert.ok(Buffer.isBuffer(tree.get('img/a.png')));
   assert.equal(
     tree.get('_Sidebar.md'),
