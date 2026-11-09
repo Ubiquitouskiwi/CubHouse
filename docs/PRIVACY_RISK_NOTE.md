@@ -71,3 +71,4 @@ device metadata (stripped at upload).
 | Date | Reviewer | Changes |
 |---|---|---|
 | 2026-11-03 | Initial | Created alongside the security and privacy plan |
+| 2026-11-09 | Guardians | Privacy notice 2026-11-09: adds aggregate usage counts (Usage page), kept about 13 months; members re-acknowledge |

@@ -304,3 +304,28 @@ test('a usage snapshot failure does not stop the retention job', async (t) => {
   const result = await runRetention({ store: env.store, config, now: Date.now() });
   assert.equal(result.usagePurged, 0);
 });
+
+// --- Privacy notice re-acknowledgement (notice bumped for usage counts) ---
+
+test('a member who accepted the previous notice is asked to re-read it once', async (t) => {
+  const { env, member } = await setup(t);
+  assert.equal(config.privacy.noticeVersion, process.env.PRIVACY_NOTICE_VERSION || '2026-11-09');
+  await env.store.updateUser(member.id, { privacyNoticeVersion: '2026-11-03' });
+  const m = env.client();
+  await m.login('member@test.com');
+
+  assert.match((await m.get('/home')).body, /privacy notice has been updated/);
+  const notice = await m.get('/privacy');
+  assert.match(notice.body, /Usage counts:/);
+  assert.match(notice.body, /action="\/privacy\/accept"/);
+
+  const accepted = await m.post('/privacy/accept');
+  assert.equal(accepted.location, '/home');
+  assert.equal((await env.store.findUserById(member.id)).privacyNoticeVersion, config.privacy.noticeVersion);
+  const events = (await env.store.listSecurityAuditEvents()).filter((e) => e.type === 'privacy.acknowledged');
+  assert.equal(events.length, 1);
+  assert.equal(events[0].details.version, config.privacy.noticeVersion);
+
+  assert.doesNotMatch((await m.get('/home')).body, /privacy notice has been updated/);
+  assert.doesNotMatch((await m.get('/privacy')).body, /action="\/privacy\/accept"/);
+});
