@@ -225,6 +225,11 @@ async function seedFamily(env, { twoGuardians = false } = {}) {
   return { parent, parent2, member };
 }
 
+/** The manual two-step setup key shown on /settings/security, without spaces. */
+function setupKeyFrom(body) {
+  return /id="mfa-setup-key">([A-Z2-7 ]+)<\/code>/.exec(body)[1].replace(/ /g, '');
+}
+
 async function addPhoto(env, fields = {}, image) {
   const bytes = image || (await plainJpeg());
   const ingested = await env.services.media.ingest(bytes);
@@ -239,5 +244,6 @@ module.exports = {
   seedUser,
   seedFamily,
   addPhoto,
+  setupKeyFrom,
   memoryMediaStorage,
 };

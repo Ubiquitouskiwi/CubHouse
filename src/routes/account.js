@@ -4,6 +4,7 @@ const { createRouter } = require('../security/asyncRouter');
 const { requireAuth, verifyPassword } = require('../auth');
 const { deriveKey, sealText, openText } = require('../security/secretBox');
 const totp = require('../security/totp');
+const { qrSvg } = require('../security/qr');
 const { generateRecoveryCodes, hashSecret } = require('../security/recovery');
 const { audit } = require('../audit');
 const { buildZip } = require('../services/zip');
@@ -55,9 +56,12 @@ module.exports = function accountRoutes(ctx) {
         req.session.mfaSetupSecret = totp.generateSecret();
       }
       const secret = req.session.mfaSetupSecret;
+      const uri = totp.otpauthUri({ secret, account: user.email, issuer: config.app.name });
       setup = {
         secret: secret.replace(/(.{4})/g, '$1 ').trim(),
-        uri: totp.otpauthUri({ secret, account: user.email, issuer: config.app.name }),
+        uri,
+        // Rendered here and inlined in this authenticated, no-store page only.
+        qrSvg: await qrSvg(uri),
       };
     }
     // Freshly issued recovery codes are shown exactly once, then forgotten.

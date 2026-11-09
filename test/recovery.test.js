@@ -11,7 +11,7 @@ const {
   isRecoveryCodeShape,
   hashSecret,
 } = require('../src/security/recovery');
-const { startApp, seedFamily, PASSWORD } = require('./helpers');
+const { startApp, seedFamily, setupKeyFrom, PASSWORD } = require('./helpers');
 
 const NEW_PW = 'a brand new long passphrase';
 
@@ -148,7 +148,7 @@ test('recovery codes: shown once at enrollment, each works once in place of an a
   const c = env.client();
   await c.login(member.email);
   const page = await c.get('/settings/security');
-  const secret = /class="setup-key"><code>([A-Z2-7 ]+)<\/code>/.exec(page.body)[1].replace(/ /g, '');
+  const secret = setupKeyFrom(page.body);
   await c.post('/settings/security/mfa/enable', { code: totp.generate(secret) });
   const shown = await c.get('/settings/security');
   const codes = [...shown.body.matchAll(/<li><code>([A-Z2-9]{5}-[A-Z2-9]{5})<\/code><\/li>/g)].map((m) => m[1]);

@@ -19,6 +19,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Two-step verification setup shows a QR code that any authenticator app can scan. It is drawn on
+  the server as inline SVG (`qrcode` 1.5.4) and appears only on the signed-in user's own setup
+  page until setup is confirmed. The setup key stays available under "Can't scan? Enter this key",
+  with a copy button.
 - Support operator account for the site's developer, created only with
   `node scripts/create-operator.js`. It must use two-step verification and can open only the
   Support page: unlock an account, reset a password (temporary password shown once, changed at
