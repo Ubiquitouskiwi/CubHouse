@@ -81,7 +81,13 @@ The full analysis and the control-by-control plan are in
 | Data store | PostgreSQL (`src/store/pgStore.js`), tested in CI; in-memory store for development |
 | Media storage | Any S3-compatible private bucket (written for DigitalOcean Spaces) |
 | Deployment | Not deployed. Caddy, systemd, backup and restore files are in `deploy/` |
-| Screenshots | Not yet added (they must use the generated sample photos, never real ones) |
+| Screenshots | In the [user guide](./docs/guide/index.md), taken from a local dev instance with made-up people and generated pictures |
+
+## User guide
+
+Plain-language help for the family, with screenshots: [docs/guide/index.md](./docs/guide/index.md).
+It covers signing in and two-step verification, what family members can do, the guardians'
+controls, two-guardian approval, account recovery, data export and erasure, and troubleshooting.
 
 ## Quick start (development, no cost, no secrets)
 
