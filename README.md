@@ -89,6 +89,10 @@ Plain-language help for the family, with screenshots: [docs/guide/index.md](./do
 It covers signing in and two-step verification, what family members can do, the guardians'
 controls, two-guardian approval, account recovery, data export and erasure, and troubleshooting.
 
+The repository's [wiki](https://github.com/Ubiquitouskiwi/CubHouse/wiki) is generated from
+`docs/guide` by `.github/workflows/wiki-sync.yml` on every change to `main`. Edit `docs/guide`,
+never the wiki: wiki edits are overwritten on the next sync.
+
 ## Quick start (development, no cost, no secrets)
 
 Requires Node 20.19 or newer.

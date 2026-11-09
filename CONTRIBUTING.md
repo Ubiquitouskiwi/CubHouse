@@ -51,6 +51,8 @@ TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres npm run t
 5. Open a pull request with the template, and add user-visible changes to `CHANGELOG.md` under
    `Unreleased`.
 6. A maintainer reviews every pull request. CI must be green.
+7. The GitHub wiki is generated from `docs/guide` (`scripts/wiki-sync.js`). Edit the guide, not
+   the wiki. A new guide page needs a wiki name in `PAGE_NAMES` in that script.
 
 ## Using AI tools
 

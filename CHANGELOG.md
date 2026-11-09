@@ -35,6 +35,8 @@ All notable changes to this project are documented here. The format follows
 - License (AGPL-3.0-only), security policy, contributing guide, code of conduct, issue and pull
   request templates, CodeQL, secret scanning, dependency review, OpenSSF Scorecard, and Dependabot.
 
+- User guide (`docs/guide/`), published to the GitHub wiki by `.github/workflows/wiki-sync.yml`
+  (`scripts/wiki-sync.js`) whenever it changes on `main`.
 - Production `Dockerfile` (multi-stage, Debian slim, non-root, `HEALTHCHECK`) and `.dockerignore`.
 - StarlingTek deployment guide (`docs/DEPLOY-STARLINGTEK.md`) and a systemd drop-in so the backup
   and alert units run on a StarlingTek host (`deploy/starlingtek/`).
