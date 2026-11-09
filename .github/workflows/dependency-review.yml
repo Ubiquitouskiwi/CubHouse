@@ -1,0 +1,30 @@
+name: Dependency review
+
+# Runs on every pull request. Fails when a change adds a dependency with a known vulnerability of
+# moderate severity or higher, or with a license that does not fit an AGPL-3.0 project. It reads
+# only the lockfile diff; nothing is installed or run.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Dependency review
+    # Free only for public repositories. Skipped while private; a skipped job counts as passing.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          deny-licenses: >-
+            SSPL-1.0, BUSL-1.1, Elastic-2.0, CC-BY-NC-4.0, CC-BY-NC-SA-4.0, CC-BY-NC-ND-4.0,
+            CPAL-1.0, EUPL-1.1
+          comment-summary-in-pr: on-failure

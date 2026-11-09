@@ -1,0 +1,53 @@
+# Caddy terminates TLS (free, automatic Let's Encrypt certificates) and
+# forwards to the app on loopback. The app itself never listens on a public
+# interface (HOST=127.0.0.1), and TRUST_PROXY_HOPS=1 tells it Caddy is the one
+# proxy whose X-Forwarded-For it may believe.
+#
+# Install: sudo cp deploy/Caddyfile /etc/caddy/Caddyfile. Caddy reads the
+# domain from ITS OWN environment: `sudo systemctl edit caddy` and add
+#   [Service]
+#   Environment=APP_DOMAIN=photos.example.org
+# then: sudo systemctl restart caddy
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Redundant with the app's own headers, so the policy holds even on a
+	# Caddy-generated error page.
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+		-Server
+	}
+
+	# Upload cap at the edge (the app enforces its own, smaller per-route caps).
+	request_body {
+		max_size 20MB
+	}
+
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Forwarded-For {remote_host}
+	}
+
+	log {
+		output file /var/log/caddy/photos-access.log {
+			roll_size 20MiB
+			roll_keep 5
+			roll_keep_for 720h
+		}
+		# Never log query strings, cookies, or auth headers.
+		format filter {
+			wrap json
+			fields {
+				request>uri query {
+					delete *
+				}
+				request>headers>Cookie delete
+				request>headers>Authorization delete
+				resp_headers>Set-Cookie delete
+			}
+		}
+	}
+}

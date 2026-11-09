@@ -1,0 +1,20 @@
+<%- include('partials/header') %>
+
+<section class="card auth-card">
+  <h1>Two-step verification</h1>
+  <p class="muted">Open your authenticator app and enter the 6-digit code for <%= siteName %>.</p>
+  <% if (error) { %>
+    <div class="alert alert-error" role="alert"><p><%= error %></p></div>
+  <% } %>
+  <form method="post" action="<%= action %>" class="stacked-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Code
+      <input type="text" name="code" autocomplete="one-time-code" maxlength="12" required autofocus aria-describedby="code-help" />
+    </label>
+    <p class="muted" id="code-help">Lost your phone? Enter one of your recovery codes (like <code>ABCDE-FGHJK</code>) instead.</p>
+    <button type="submit" class="primary-button">Verify</button>
+  </form>
+</section>
+
+<%- include('partials/footer') %>

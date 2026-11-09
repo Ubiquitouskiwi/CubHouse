@@ -1,0 +1,39 @@
+<%- include('partials/header') %>
+
+<section class="card auth-card">
+  <h1>Reset your sign-in</h1>
+  <p class="muted">
+    Forgot your password, or lost the phone with your two-step codes? Ask a
+    parent for a one-time reset code. They will give it to you in person or
+    by phone. It looks like <code>RESET-ABCD-EFGH-JKMN</code>.
+  </p>
+  <% if (errors && errors.length) { %>
+    <div class="alert alert-error" role="alert">
+      <% errors.forEach(function (e) { %><p><%= e %></p><% }) %>
+    </div>
+  <% } %>
+  <form method="post" action="/reset" class="stacked-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Email
+      <input type="email" name="email" autocomplete="username" value="<%= values.email || '' %>" required />
+    </label>
+    <label>
+      Reset code
+      <input type="text" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" required />
+    </label>
+    <label>
+      New password
+      <input type="password" name="password" autocomplete="new-password" minlength="12" required />
+    </label>
+    <label>
+      Confirm new password
+      <input type="password" name="confirm" autocomplete="new-password" minlength="12" required />
+    </label>
+    <p class="muted">This also turns off two-step verification. You can turn it back on in Settings.</p>
+    <button type="submit" class="primary-button">Reset and sign in again</button>
+  </form>
+  <p class="muted"><a href="/login">Back to sign in</a></p>
+</section>
+
+<%- include('partials/footer') %>

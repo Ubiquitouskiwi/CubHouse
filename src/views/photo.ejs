@@ -1,0 +1,279 @@
+<%- include('partials/header') %>
+
+<%
+  var audienceLabel = {
+    parents: 'Parents only',
+    everyone: 'Shared with the whole family',
+    groups: 'Shared with groups',
+    users: 'Shared with specific people'
+  }[photo.audienceType] || 'Parents only';
+  var roleBadge = { parent: 'Parent', dev: 'Developer', user: 'Family' };
+%>
+
+<section class="card">
+  <p><a href="/photos">&larr; Back to photos</a></p>
+  <h1><%= photo.caption || 'Untitled' %></h1>
+  <span class="photo-badges">
+    <% if (photo.pendingApproval) { %><span class="badge badge-pending">Pending approval</span><% } %>
+    <% if (photo.hidden) { %><span class="badge badge-hidden">Hidden</span><% } %>
+    <% if (!photo.downloadable) { %><span class="badge badge-locked">No download</span><% } %>
+    <% if (cap.setPermissions) { %><span class="badge badge-audience"><%= audienceLabel %></span><% } %>
+  </span>
+</section>
+
+<section class="card photo-detail">
+  <img class="photo-detail-image" src="/media/<%= photo.id %>/display" alt="<%= photo.caption || 'Family photo' %>" />
+  <div class="photo-detail-actions">
+    <% if (cap.download) { %>
+      <a class="primary-button" href="/photos/<%= photo.id %>/download">Download</a>
+      <% if (!cap.setPermissions) { %>
+        <p class="muted small">Downloads are recorded, and the copy carries a reference mark. Please keep it within the family.</p>
+      <% } %>
+    <% } else { %>
+      <span class="muted">Download is not permitted for this photo.</span>
+    <% } %>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Reactions</h2>
+  <% if (!photo.reactionsEnabled) { %>
+    <p class="muted">Reactions are turned off for this photo.</p>
+  <% } else { %>
+    <div class="reaction-bar">
+      <% reactionEmojis.forEach(function (emoji) { var count = reactionCounts[emoji] || 0; var mine = myReactions.indexOf(emoji) !== -1; %>
+        <% if (canReact) { %>
+          <form method="post" action="/photos/<%= photo.id %>/react" class="inline-form">
+            <input type="hidden" name="emoji" value="<%= emoji %>" />
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="reaction-chip<%= mine ? ' is-mine' : '' %>" title="<%= mine ? 'Remove your reaction' : 'React' %>">
+              <span class="reaction-emoji"><%= emoji %></span>
+              <% if (count > 0) { %><span class="reaction-count"><%= count %></span><% } %>
+            </button>
+          </form>
+        <% } else { %>
+          <span class="reaction-chip<%= mine ? ' is-mine' : '' %>">
+            <span class="reaction-emoji"><%= emoji %></span>
+            <% if (count > 0) { %><span class="reaction-count"><%= count %></span><% } %>
+          </span>
+        <% } %>
+      <% }); %>
+    </div>
+  <% } %>
+</section>
+
+<section class="card" id="comments">
+  <h2>Comments</h2>
+  <% if (!photo.commentsEnabled) { %>
+    <p class="muted">Comments are turned off for this photo.</p>
+  <% } %>
+  <% if (photo.commentsEnabled || cap.setPermissions) { %>
+    <% if (comments.length === 0) { %>
+      <p class="muted">No comments yet.<% if (canComment) { %> Be the first to say something.<% } %></p>
+    <% } else { %>
+      <ul class="comment-list">
+        <% comments.forEach(function (c) { %>
+          <li class="comment<%= c.deletedAt ? ' is-removed' : '' %>">
+            <div class="comment-head">
+              <span class="comment-author"><%= c.userDisplayName || 'Someone' %></span>
+              <span class="badge badge-role"><%= roleBadge[c.authorRole] || 'Family' %></span>
+              <span class="comment-time muted"><%= new Date(c.createdAt).toLocaleString() %></span>
+              <% if (c.deletedAt) { %><span class="badge badge-hidden">Removed (visible to parents only)</span><% } %>
+            </div>
+            <div class="comment-body"><%= c.body %></div>
+            <div class="comment-actions">
+              <% if (canDeleteComment(c)) { %>
+                <form method="post" action="/photos/<%= photo.id %>/comments/<%= c.id %>/delete" class="inline-form"
+                  data-confirm="Remove this comment?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button type="submit" class="link-button danger">Remove</button>
+                </form>
+              <% } %>
+              <% if (!c.deletedAt && !cap.setPermissions && c.userId !== user.id) { %>
+                <form method="post" action="/photos/<%= photo.id %>/comments/<%= c.id %>/report" class="inline-form"
+                  data-confirm="Report this comment to the parents?">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button type="submit" class="link-button">Report</button>
+                </form>
+              <% } %>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  <% } %>
+
+  <% if (canComment) { %>
+    <form method="post" action="/photos/<%= photo.id %>/comments" class="stacked-form comment-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label>
+        Add a comment
+        <textarea name="body" rows="3" maxlength="2000" placeholder="Write a comment..." required></textarea>
+      </label>
+      <p class="muted small">Please avoid full names, school or daycare names, and addresses.</p>
+      <button type="submit" class="primary-button">Post comment</button>
+    </form>
+  <% } %>
+</section>
+
+<% if (cap.addToAlbum) { %>
+  <section class="card">
+    <h2>Add to one of your albums</h2>
+    <% if (albums.length === 0) { %>
+      <p class="muted">You have no albums yet. Create one on the <a href="/albums">Albums</a> page.</p>
+    <% } else { %>
+      <form method="post" action="/albums/<%= albums[0].id %>/add" class="inline-generate" data-album-add>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label>
+          Album
+          <select name="__album" data-album-select>
+            <% albums.forEach(function (a) { %>
+              <option value="<%= a.id %>"><%= a.name %></option>
+            <% }); %>
+          </select>
+        </label>
+        <input type="hidden" name="photoId" value="<%= photo.id %>" />
+        <button type="submit" class="primary-button">Add to album</button>
+      </form>
+    <% } %>
+  </section>
+<% } %>
+
+<% if (cap.setPermissions) { %>
+  <section class="card">
+    <h2>Parent controls</h2>
+    <p class="muted">
+      Making a photo visible to the whole family, or allowing downloads, needs
+      the other guardian's approval. Hiding, narrowing, and locking always take
+      effect right away.
+    </p>
+
+    <form method="post" action="/photos/<%= photo.id %>/permissions" class="stacked-form" data-audience-scope>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="hidden" <%= photo.hidden ? 'checked' : '' %> />
+        <span>Hide this photo (only parents can see it)</span>
+      </label>
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="downloadable" data-download-toggle="#watermark-override" <%= photo.downloadable ? 'checked' : '' %> />
+        <span>Allow downloads of this photo</span>
+      </label>
+      <div id="watermark-override" class="indent">
+        <label class="checkbox-row">
+          <input type="checkbox" name="watermarkOff" <%= photo.watermark === false ? 'checked' : '' %> />
+          <span>
+            Skip the visible mark on downloads
+            <span class="muted">(not recommended; the mark survives screenshots)</span>
+          </span>
+        </label>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" name="commentsEnabled" <%= photo.commentsEnabled !== false ? 'checked' : '' %> />
+        <span>Allow comments on this photo</span>
+      </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="reactionsEnabled" <%= photo.reactionsEnabled !== false ? 'checked' : '' %> />
+        <span>Allow emoji reactions on this photo</span>
+      </label>
+
+      <fieldset class="audience-fieldset">
+        <legend>Who can see this photo</legend>
+        <label class="radio-row">
+          <input type="radio" name="audienceType" value="<%= audiences.PARENTS %>" data-aud-radio
+            <%= (!photo.audienceType || photo.audienceType === audiences.PARENTS) ? 'checked' : '' %> />
+          <span>Parents only</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="audienceType" value="<%= audiences.GROUPS %>" data-aud-radio
+            <%= photo.audienceType === audiences.GROUPS ? 'checked' : '' %> />
+          <span>Only specific groups</span>
+        </label>
+        <div class="audience-list" data-aud-panel="<%= audiences.GROUPS %>">
+          <% if (groups.length === 0) { %>
+            <p class="muted">No groups yet. Create one on the <a href="/admin">Admin</a> page.</p>
+          <% } %>
+          <% groups.forEach(function (g) { %>
+            <label class="checkbox-row">
+              <input type="checkbox" name="audienceGroupIds" value="<%= g.id %>" <%= (photo.audienceGroupIds || []).includes(g.id) ? 'checked' : '' %> />
+              <span><%= g.name %></span>
+            </label>
+          <% }); %>
+        </div>
+        <label class="radio-row">
+          <input type="radio" name="audienceType" value="<%= audiences.USERS %>" data-aud-radio
+            <%= photo.audienceType === audiences.USERS ? 'checked' : '' %> />
+          <span>Only specific people</span>
+        </label>
+        <div class="audience-list" data-aud-panel="<%= audiences.USERS %>">
+          <% members.forEach(function (m) { %>
+            <label class="checkbox-row">
+              <input type="checkbox" name="audienceUserIds" value="<%= m.id %>" <%= (photo.audienceUserIds || []).includes(m.id) ? 'checked' : '' %> />
+              <span><%= m.displayName %> <span class="muted">(<%= m.role %>)</span></span>
+            </label>
+          <% }); %>
+        </div>
+        <label class="radio-row">
+          <input type="radio" name="audienceType" value="<%= audiences.EVERYONE %>" data-aud-radio
+            <%= photo.audienceType === audiences.EVERYONE ? 'checked' : '' %> />
+          <span>The whole family (every member)</span>
+        </label>
+      </fieldset>
+
+      <button type="submit" class="primary-button">Save permissions</button>
+    </form>
+
+    <form method="post" action="/photos/<%= photo.id %>/delete" class="danger-form"
+      data-confirm="Delete this photo permanently? Copies family members already downloaded cannot be recalled.">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="link-button danger">Delete this photo permanently</button>
+    </form>
+
+    <hr class="section-divider" />
+
+    <h3>Upload profile</h3>
+    <p class="muted">
+      Moving this photo to a profile copies that profile's permissions onto it.
+      Editing a profile later does not rewrite this photo.
+    </p>
+    <form method="post" action="/photos/<%= photo.id %>/profile" class="inline-generate">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label>
+        Profile
+        <select name="profileId">
+          <option value="" <%= !photo.profileId ? 'selected' : '' %>>No profile (keep current permissions)</option>
+          <% profiles.forEach(function (p) { %>
+            <option value="<%= p.id %>" <%= photo.profileId === p.id ? 'selected' : '' %>><%= p.name %></option>
+          <% }); %>
+        </select>
+      </label>
+      <button type="submit" class="primary-button">Move to profile</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Download history for this photo</h2>
+    <p class="muted">See the <a href="/photos/downloads">full download history</a> to trace a copy you found.</p>
+    <% if (!downloads || downloads.length === 0) { %>
+      <p class="muted">No downloads of this photo yet.</p>
+    <% } else { %>
+      <table class="data-table">
+        <thead><tr><th>Ref</th><th>Who</th><th>When</th><th>Network</th></tr></thead>
+        <tbody>
+          <% downloads.forEach(function (d) { %>
+            <tr>
+              <td><code><%= d.ref %></code></td>
+              <td><%= d.userDisplayName || 'Former member' %></td>
+              <td><%= d.downloadedAt.replace('T', ' ').slice(0, 16) %></td>
+              <td><%= d.ipNet || 'unknown' %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+<% } %>
+
+<%- include('partials/footer') %>

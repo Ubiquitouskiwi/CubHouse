@@ -1,0 +1,37 @@
+name: OpenSSF Scorecard
+
+# Weekly check of the repository's security practices (branch protection, token permissions,
+# pinned actions, and more). Findings appear on the Security tab and feed the README badge.
+# Publishing results works for public repositories only.
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: '27 6 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Run analysis
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        with:
+          sarif_file: results.sarif

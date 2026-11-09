@@ -1,0 +1,2130 @@
+:root {
+  /* Outdoorsy "bear camp" palette: warm cream paper, forest greens, bark
+     browns, and a honey-amber accent. Everything downstream reads from these
+     variables, so light and dark stay in sync and keep good contrast. */
+  --bg: #f3ecdc;
+  --surface: #fffaf0;
+  --text: #33291f;
+  --muted: #7a6a56;
+  --accent: #2f6b4f;
+  --accent-text: #fffaf0;
+  --accent-soft: rgba(47, 107, 79, 0.14);
+  --honey: #e0a53f;
+  --honey-soft: rgba(224, 165, 63, 0.18);
+  --bark: #6b4a32;
+  --sky: #bfe3e8;
+  --pine: #2f6b4f;
+  --pine-deep: #234e3a;
+  --border: #e3d7bf;
+  --error-bg: #fbe4dd;
+  --error-text: #8a3321;
+  --success-bg: #e3f1e4;
+  --success-text: #1f6b43;
+  --radius: 14px;
+  --shadow: 0 10px 24px rgba(74, 52, 30, 0.1);
+}
+
+/*
+ * Dark palette. The header script resolves the user's preference (light/dark,
+ * or system via the OS media query) to a concrete data-theme on <html>, so
+ * this block is the single source for dark colors. A dusk-campsite feel: deep
+ * pine-black ground, warm amber accents still glowing.
+ */
+[data-theme='dark'] {
+  --bg: #15201a;
+  --surface: #1e2a22;
+  --text: #ece5d6;
+  --muted: #a6b0a0;
+  --accent: #6fbf95;
+  --accent-text: #11211a;
+  --accent-soft: rgba(111, 191, 149, 0.16);
+  --honey: #e8bb63;
+  --honey-soft: rgba(232, 187, 99, 0.16);
+  --bark: #caa684;
+  --sky: #27404a;
+  --pine: #3f8a63;
+  --pine-deep: #1b2f24;
+  --border: #33443a;
+  --error-bg: #3a241e;
+  --error-text: #f1b3a8;
+  --success-bg: #1d3328;
+  --success-text: #9ad8b4;
+  --shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/*
+ * No-JS fallback: if the inline resolver did not run, a user whose preference
+ * is "system" (no explicit data-theme set) still gets dark colors when the OS
+ * asks for them. An explicit light/dark data-theme always takes precedence.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --bg: #15201a;
+    --surface: #1e2a22;
+    --text: #ece5d6;
+    --muted: #a6b0a0;
+    --accent: #6fbf95;
+    --accent-text: #11211a;
+    --accent-soft: rgba(111, 191, 149, 0.16);
+    --honey: #e8bb63;
+    --honey-soft: rgba(232, 187, 99, 0.16);
+    --bark: #caa684;
+    --sky: #27404a;
+    --pine: #3f8a63;
+    --pine-deep: #1b2f24;
+    --border: #33443a;
+    --error-bg: #3a241e;
+    --error-text: #f1b3a8;
+    --success-bg: #1d3328;
+    --success-text: #9ad8b4;
+    --shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Nunito', 'Quicksand', system-ui, -apple-system, Segoe UI, Roboto,
+    Helvetica, Arial, sans-serif;
+  background-color: var(--bg);
+  /* A soft rolling-hills band across the bottom and a faint paw-print texture,
+     drawn with CSS gradients so there is no image dependency. */
+  background-image: radial-gradient(
+    120% 70% at 50% 100%,
+    var(--accent-soft) 0%,
+    transparent 55%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+a {
+  color: var(--accent);
+}
+
+.site-header {
+  display: flex;
+  align-items: center;
+  /* Extra bottom padding reserves room for the scenery strip (::before, 26px)
+     so the brand, nav, and avatar never sit on top of the pine silhouette. */
+  padding: 0.95rem 1.6rem 2.4rem;
+  /* A banner of warm cream "paper" with a soft campsite sky wash at the top,
+     a layered mountains + pines silhouette along the bottom, and a torn
+     construction-paper edge, so the whole header reads like a scrapbook
+     cover strip. */
+  background:
+    linear-gradient(180deg, var(--sky) 0%, rgba(191, 227, 232, 0) 48%),
+    var(--surface);
+  box-shadow: 0 3px 0 rgba(74, 52, 30, 0.08);
+  position: relative;
+  z-index: 10;
+}
+
+/* Keep the brand, nav, and avatar above the scenery and torn-edge layers. */
+.site-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Layered outdoor scenery (hills + pines) sitting along the header's base. */
+.site-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='26' viewBox='0 0 240 26' preserveAspectRatio='none'%3E%3Cpath d='M0 26 L26 9 L52 26 Z M40 26 L70 6 L100 26 Z M88 26 L120 11 L152 26 Z M140 26 L172 5 L206 26 Z M196 26 L222 10 L240 26 Z' fill='%23234e3a' opacity='0.45'/%3E%3Cpath d='M0 26 Q120 14 240 26 Z' fill='%232f6b4f'/%3E%3Cg fill='%23234e3a'%3E%3Cpath d='M22 26 L15 13 L29 26 Z M22 26 L16 19 L28 26 Z'/%3E%3Cpath d='M64 26 L58 15 L70 26 Z'/%3E%3Cpath d='M118 26 L111 12 L125 26 Z M118 26 L113 18 L123 26 Z'/%3E%3Cpath d='M176 26 L170 14 L182 26 Z'/%3E%3Cpath d='M214 26 L208 15 L220 26 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 240px 26px;
+  pointer-events: none;
+}
+
+/* Torn construction-paper edge hanging just below the scenery. */
+.site-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -7px;
+  height: 9px;
+  background: var(--pine-deep);
+  clip-path: polygon(
+    0 0, 4% 70%, 8% 10%, 12% 75%, 16% 15%, 20% 70%, 24% 5%, 28% 72%,
+    32% 12%, 36% 76%, 40% 8%, 44% 70%, 48% 14%, 52% 74%, 56% 6%, 60% 72%,
+    64% 12%, 68% 76%, 72% 8%, 76% 70%, 80% 14%, 84% 74%, 88% 6%, 92% 72%,
+    96% 12%, 100% 70%, 100% 0
+  );
+  pointer-events: none;
+}
+
+.brand {
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  text-decoration: none;
+  color: var(--text);
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 0 rgba(255, 250, 240, 0.6);
+}
+
+/* A friendly bear-face mark on a round honey "badge" before the wordmark. */
+.brand::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background-color: var(--honey-soft);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='18' cy='16' r='9' fill='%236b4a32'/%3E%3Ccircle cx='46' cy='16' r='9' fill='%236b4a32'/%3E%3Ccircle cx='18' cy='16' r='4' fill='%23e0a53f'/%3E%3Ccircle cx='46' cy='16' r='4' fill='%23e0a53f'/%3E%3Ccircle cx='32' cy='36' r='22' fill='%236b4a32'/%3E%3Cellipse cx='32' cy='42' rx='11' ry='9' fill='%23e9d7b8'/%3E%3Ccircle cx='24' cy='32' r='3.2' fill='%23241a12'/%3E%3Ccircle cx='40' cy='32' r='3.2' fill='%23241a12'/%3E%3Cellipse cx='32' cy='40' rx='3.6' ry='2.6' fill='%23241a12'/%3E%3C/svg%3E");
+  background-size: 78%;
+  background-position: center 58%;
+  background-repeat: no-repeat;
+  border: 2px solid var(--honey);
+  box-shadow: 0 2px 5px rgba(74, 52, 30, 0.18);
+  transform: rotate(-4deg);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+
+/* Nav links as little trail-sign pills, each tilted a touch for a hand-pinned
+   scrapbook feel. */
+.site-nav a {
+  position: relative;
+  text-decoration: none;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--bark);
+  background: var(--surface);
+  padding: 0.4rem 0.95rem;
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(74, 52, 30, 0.12);
+  transition: transform 0.14s ease, background 0.14s ease, color 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.site-nav a:nth-child(1) { transform: rotate(-2.5deg); }
+.site-nav a:nth-child(2) { transform: rotate(1.5deg); }
+.site-nav a:nth-child(3) { transform: rotate(-1deg); }
+
+.site-nav a:hover,
+.site-nav a:focus-visible {
+  text-decoration: none;
+  transform: rotate(0deg) translateY(-1px);
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--pine-deep);
+  outline: none;
+}
+
+.site-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-trigger {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  line-height: 0;
+}
+
+.profile-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Avatar as a round wooden "camp button" with a honey ring. */
+.profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--bark);
+  color: var(--surface);
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  user-select: none;
+  border: 2px solid var(--honey);
+  box-shadow: 0 2px 5px rgba(74, 52, 30, 0.22);
+  transition: transform 0.14s ease;
+}
+
+.profile-trigger:hover .profile-avatar {
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.4rem;
+  z-index: 50;
+}
+
+.profile-dropdown[hidden] {
+  display: none;
+}
+
+.profile-dropdown-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0.3rem;
+}
+
+.profile-dropdown-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.profile-dropdown-role {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.profile-dropdown-form {
+  margin: 0;
+}
+
+.profile-dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.6rem;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.92rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.profile-dropdown-item:hover {
+  background: var(--bg);
+}
+
+.profile-dropdown-signout {
+  color: var(--error-text);
+}
+
+.profile-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.profile-details dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.profile-details dd {
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  /* Own stacking layer so the tilted/taped card below can never paint over the
+     "Photos" / "Your albums" tiles, and clear top/bottom gaps so the hero
+     buttons above and the washi tape below have breathing room. */
+  position: relative;
+  z-index: 1;
+  margin: 1.5rem 0 1.75rem;
+}
+
+.dashboard-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+}
+
+.dashboard-tile:hover {
+  border-color: var(--accent);
+}
+
+.dashboard-tile-title {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dashboard-tile-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.dashboard-tile-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.stat-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.stat-list strong {
+  font-size: 1.25rem;
+  color: var(--accent);
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 1.9rem 1.5rem;
+  /* room for the tilt, tape, and construction-paper backing to show */
+  padding: 0.75rem 0.5rem 0.5rem;
+}
+
+/*
+ * Scrapbook album page. Each tile is a cream page tilted on the board,
+ * held down by a strip of washi tape, with a ragged construction-paper mat
+ * offset behind it (::before) the way a real scrapbook layers a photo on a
+ * colored backing sheet. Variants below vary the tilt, the snipped corners,
+ * the tape, and the construction-paper color so no two neighbors match.
+ */
+.album-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.4rem 1.25rem 1.3rem;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  /* hand-cut, slightly uneven corners */
+  border-radius: 13px 10px 14px 11px / 11px 14px 10px 13px;
+  box-shadow: var(--shadow);
+  transform: rotate(-1.4deg);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  /* construction-paper backing color, overridden per variant */
+  --mat: var(--honey);
+}
+
+/* Construction-paper mat: a torn-edge colored sheet peeking out behind. */
+.album-tile::before {
+  content: "";
+  position: absolute;
+  inset: -9px -8px -11px -10px;
+  z-index: -1;
+  background: var(--mat);
+  border-radius: 16px 12px 18px 13px / 13px 18px 12px 16px;
+  /* ragged torn-paper edge */
+  clip-path: polygon(
+    2% 4%, 10% 0, 24% 3%, 38% 0, 52% 3%, 66% 0, 80% 3%, 92% 0, 100% 6%,
+    97% 20%, 100% 36%, 97% 52%, 100% 66%, 97% 82%, 100% 96%,
+    88% 100%, 72% 97%, 56% 100%, 40% 97%, 24% 100%, 10% 97%, 0 94%,
+    3% 78%, 0 62%, 3% 46%, 0 30%, 3% 14%
+  );
+  box-shadow: 0 6px 14px rgba(74, 52, 30, 0.14);
+  opacity: 0.92;
+}
+
+/* Washi tape holding the page to the board. */
+.album-tile::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  margin-left: -34px;
+  width: 68px;
+  height: 22px;
+  background: var(--honey-soft);
+  border: 1px solid var(--honey);
+  border-radius: 2px;
+  transform: rotate(-5deg);
+  opacity: 0.85;
+  z-index: 2;
+}
+
+.album-tile:hover,
+.album-tile:focus-visible {
+  transform: rotate(0deg) translateY(-3px) scale(1.02);
+  box-shadow: 0 16px 30px rgba(74, 52, 30, 0.18);
+  outline: none;
+}
+
+/* ----- Variants: cycle every 4 tiles so a long shelf stays lively ----- */
+.album-grid .album-tile:nth-child(4n + 1) {
+  transform: rotate(-1.4deg);
+  border-radius: 13px 10px 14px 11px / 11px 14px 10px 13px;
+  --mat: var(--honey);
+}
+.album-grid .album-tile:nth-child(4n + 1)::after {
+  left: 50%;
+  margin-left: -34px;
+  transform: rotate(-6deg);
+}
+
+.album-grid .album-tile:nth-child(4n + 2) {
+  transform: rotate(1.6deg);
+  border-radius: 10px 14px 11px 13px / 14px 11px 13px 10px;
+  --mat: var(--pine);
+}
+.album-grid .album-tile:nth-child(4n + 2)::after {
+  left: 28%;
+  margin-left: 0;
+  width: 60px;
+  transform: rotate(8deg);
+}
+
+.album-grid .album-tile:nth-child(4n + 3) {
+  transform: rotate(-0.8deg);
+  border-radius: 14px 11px 13px 10px / 10px 13px 11px 14px;
+  --mat: var(--bark);
+}
+.album-grid .album-tile:nth-child(4n + 3)::after {
+  left: 68%;
+  margin-left: -38px;
+  width: 54px;
+  transform: rotate(-11deg);
+}
+
+.album-grid .album-tile:nth-child(4n + 4) {
+  transform: rotate(2deg);
+  border-radius: 11px 13px 10px 14px / 13px 10px 14px 11px;
+  --mat: var(--accent);
+}
+.album-grid .album-tile:nth-child(4n + 4)::after {
+  left: 44%;
+  margin-left: 0;
+  width: 72px;
+  transform: rotate(4deg);
+}
+
+.album-title {
+  font-family: "Fredoka", "Nunito", sans-serif;
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+
+.album-count {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.site-main {
+  max-width: 900px;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+
+.site-footer {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.card {
+  background: var(--surface);
+  /* Hand-cut scrapbook edge: a dashed "cut line" just inside a soft paper
+     border, with a slightly uneven radius so corners feel snipped by hand. */
+  border: 2px dashed var(--border);
+  border-radius: 18px 14px 20px 15px / 15px 20px 14px 18px;
+  padding: 1.5rem;
+  margin: 0.75rem 0 1.25rem;
+  box-shadow: var(--shadow);
+  position: relative;
+  outline: 6px solid var(--surface);
+  outline-offset: -10px;
+}
+
+/* A strip of "washi tape" holding each card onto the page, top-left corner. */
+.card::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 26px;
+  width: 64px;
+  height: 22px;
+  background: var(--honey-soft);
+  border: 1px solid var(--honey);
+  border-radius: 2px;
+  transform: rotate(-5deg);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.auth-card {
+  max-width: 420px;
+  margin: 2rem auto;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.stacked-form label,
+.inline-generate label {
+  display: block;
+  margin-bottom: 0.9rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+input[type='text'],
+input[type='email'],
+input[type='password'] {
+  display: block;
+  width: 100%;
+  margin-top: 0.3rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.3rem;
+  font-size: 1rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--pine-deep);
+  transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.1s ease;
+}
+
+.primary-button:hover {
+  opacity: 0.96;
+  transform: translateY(-1px);
+}
+
+.primary-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--pine-deep);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.inline-form {
+  display: inline;
+}
+
+.inline-generate {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.inline-generate label {
+  flex: 1;
+  min-width: 220px;
+  margin-bottom: 0;
+}
+
+.alert {
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.alert p {
+  margin: 0.2rem 0;
+}
+
+.alert-error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.alert-success {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem 1.35rem;
+  padding-top: 0.5rem;
+}
+
+.photo {
+  margin: 0;
+}
+
+.photo img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.55rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.badge-open {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.badge-used {
+  background: var(--border);
+  color: var(--muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.account-id code {
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.theme-options {
+  border: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin: 0;
+  color: var(--text);
+}
+
+.theme-option:hover {
+  border-color: var(--accent);
+}
+
+.theme-option input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.theme-option-label {
+  font-size: 0.95rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Photo viewer --- */
+
+.photo-card {
+  display: flex;
+  flex-direction: column;
+  /* A scrapbook photo: the card itself is the torn construction-paper mat
+     (colored, ragged edge), with a white "page" drawn on top by ::after and
+     the image/caption sitting on that page. Variants vary the tilt, corner
+     cut, tape, and paper color so no two neighbors look identical. */
+  --mat: var(--honey);
+  background: var(--mat);
+  border-radius: 14px 11px 16px 12px / 12px 16px 11px 14px;
+  /* ragged torn-paper edge on the construction-paper mat */
+  clip-path: polygon(
+    2% 5%, 12% 0, 26% 4%, 40% 0, 54% 4%, 68% 0, 82% 4%, 94% 0, 100% 7%,
+    97% 22%, 100% 38%, 97% 54%, 100% 70%, 97% 86%, 100% 97%,
+    87% 100%, 71% 96%, 55% 100%, 39% 96%, 23% 100%, 9% 96%, 0 93%,
+    3% 76%, 0 60%, 3% 44%, 0 28%, 3% 13%
+  );
+  /* padding reveals the colored paper as a border around the white page */
+  padding: 14px 13px 13px;
+  box-shadow: var(--shadow);
+  position: relative;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+/* The white page sitting on top of the construction paper. */
+.photo-card::after {
+  content: '';
+  position: absolute;
+  inset: 11px 10px 10px;
+  z-index: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(74, 52, 30, 0.12);
+  pointer-events: none;
+}
+
+/* Keep the image, caption, actions, and select box above the white page. */
+.photo-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Straighten and lift on hover/focus so interaction feels crisp. */
+.photo-card:hover,
+.photo-card:focus-within {
+  transform: rotate(0deg) translateY(-3px) scale(1.01);
+  box-shadow: 0 14px 28px rgba(74, 52, 30, 0.2);
+  z-index: 2;
+}
+
+/* The tape strip. Angle/side is overridden per variant. */
+.photo-card::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  margin-left: -32px;
+  width: 64px;
+  height: 20px;
+  background: var(--honey-soft);
+  border: 1px solid var(--honey);
+  border-radius: 2px;
+  transform: rotate(-6deg);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Five hand-placed variants, cycled across the grid so the layout stays
+   lively without any two adjacent cards matching. Reduced-motion users still
+   get the tilt (it is static), just no hover animation (guarded below). */
+.photo-grid .photo-card:nth-child(5n + 1) {
+  transform: rotate(-1.6deg);
+  border-radius: 12px 9px 13px 10px / 10px 13px 9px 12px;
+  --mat: var(--honey);
+}
+.photo-grid .photo-card:nth-child(5n + 2) {
+  transform: rotate(1.3deg);
+  border-radius: 9px 13px 10px 12px / 13px 10px 12px 9px;
+  --mat: var(--pine);
+}
+.photo-grid .photo-card:nth-child(5n + 2)::before {
+  left: 30%;
+  transform: rotate(7deg);
+}
+.photo-grid .photo-card:nth-child(5n + 3) {
+  transform: rotate(-0.8deg);
+  border-radius: 13px 10px 12px 9px / 9px 12px 10px 13px;
+  --mat: var(--bark);
+}
+.photo-grid .photo-card:nth-child(5n + 3)::before {
+  left: 70%;
+  margin-left: -40px;
+  transform: rotate(-10deg);
+  width: 54px;
+}
+.photo-grid .photo-card:nth-child(5n + 4) {
+  transform: rotate(2deg);
+  border-radius: 10px 12px 9px 13px / 12px 9px 13px 10px;
+  --mat: var(--accent);
+}
+.photo-grid .photo-card:nth-child(5n + 4)::before {
+  left: 42%;
+  transform: rotate(4deg);
+  width: 70px;
+}
+.photo-grid .photo-card:nth-child(5n) {
+  transform: rotate(-2.1deg);
+  border-radius: 11px 13px 11px 12px / 12px 11px 13px 11px;
+  --mat: var(--honey);
+}
+.photo-grid .photo-card:nth-child(5n)::before {
+  left: 60%;
+  transform: rotate(-4deg);
+}
+
+.photo-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  line-height: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.photo-open:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.photo-open img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  border-radius: 6px;
+}
+
+.photo-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem 0.3rem;
+}
+
+.photo-caption-text {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.photo-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.badge-hidden {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.badge-locked {
+  background: var(--border);
+  color: var(--muted);
+}
+
+.badge-audience {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.3rem 0.7rem 0.7rem;
+}
+
+.photo-actions .link-button {
+  font-size: 0.85rem;
+}
+
+.link-button.danger,
+.link-button .danger {
+  color: var(--error-text);
+}
+
+/* --- Parent management: bulk bar + selection --- */
+
+.manage-hint kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+}
+
+.bulk-bar {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 5;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.bulk-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.9rem;
+}
+
+.bulk-selectall {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.bulk-selectall input {
+  accent-color: var(--accent);
+  margin: 0;
+  width: auto;
+}
+
+.bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn-sm:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn-sm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-sm.btn-danger:not(:disabled) {
+  color: var(--error-text);
+  border-color: var(--error-text);
+}
+
+/* Per-photo select box, top-left of each manageable card. The compound
+   selector keeps its z-index above the `.photo-card > *` baseline and tape. */
+.photo-card .photo-select {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 4;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.photo-select input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.photo-select-box {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 2px solid var(--surface);
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  transition: background 0.1s ease;
+}
+
+.photo-select input:checked + .photo-select-box {
+  background: var(--accent);
+  border-color: var(--accent-text);
+}
+
+.photo-select input:checked + .photo-select-box::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--accent-text);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.photo-select input:focus-visible + .photo-select-box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* On a manageable grid, show the select box and a subtle selected highlight. */
+.photo-grid.is-manageable .photo-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.photo-card.is-selected {
+  /* The card is a clip-path shape, so an outline would be clipped; instead
+     turn the construction-paper mat itself to the accent color. */
+  --mat: var(--accent);
+  box-shadow: 0 10px 24px rgba(47, 107, 79, 0.35);
+}
+
+.photo-card.is-selected::before {
+  opacity: 1;
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.photo-card.is-selected .photo-open img {
+  opacity: 0.88;
+}
+
+/* --- Single photo detail --- */
+
+.photo-detail-image {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+  background: var(--bg);
+  display: block;
+}
+
+.photo-detail-actions {
+  margin-top: 1rem;
+}
+
+.checkbox-row,
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.checkbox-row input,
+.radio-row input {
+  accent-color: var(--accent);
+  margin: 0;
+  width: auto;
+}
+
+.audience-fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.audience-fieldset legend {
+  font-weight: 600;
+  padding: 0 0.4rem;
+}
+
+.audience-list {
+  margin: 0.3rem 0 0.9rem 1.6rem;
+  padding-left: 0.8rem;
+  border-left: 2px solid var(--border);
+}
+
+.danger-form {
+  margin-top: 1rem;
+}
+
+select {
+  display: block;
+  margin-top: 0.3rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* --- Lightbox --- */
+
+body.lightbox-open {
+  overflow: hidden;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  z-index: 100;
+}
+
+.lightbox[hidden] {
+  display: none;
+}
+
+.lightbox-figure {
+  margin: 0;
+  max-width: 92vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  overflow: auto;
+}
+
+.lightbox-image {
+  max-width: 92vw;
+  max-height: 72vh;
+  object-fit: contain;
+  border-radius: 8px;
+  cursor: zoom-in;
+  transition: transform 0.15s ease;
+}
+
+.lightbox-image.is-zoomed {
+  transform: scale(1.8);
+  cursor: zoom-out;
+}
+
+.lightbox-caption {
+  color: #ffffff;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 2.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-open-page {
+  color: #ffffff;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+/* --- Reactions --- */
+.reaction-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+button.reaction-chip:hover {
+  border-color: var(--accent);
+}
+.reaction-chip.is-mine {
+  border-color: var(--accent);
+  background: var(--accent-soft, rgba(90, 120, 200, 0.15));
+}
+.reaction-emoji {
+  font-size: 1.15rem;
+}
+.reaction-count {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Comments --- */
+.comment-list {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.comment {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface);
+}
+.comment-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin-bottom: 0.25rem;
+}
+.comment-author {
+  font-weight: 600;
+  color: var(--text);
+}
+.comment-time {
+  font-size: 0.8rem;
+}
+.comment-body {
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.comment-form textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+
+/* --- Misc --- */
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+.profile-create {
+  margin: 0.75rem 0 1rem;
+}
+.profile-create > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+.bulk-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.5rem;
+}
+
+/* ====================================================================
+   Outdoorsy bear theme: home hero, scenery, and playful flourishes
+   ==================================================================== */
+
+/* --- Home hero --- */
+.hero {
+  position: relative;
+  z-index: 0;
+  border-radius: calc(var(--radius) + 4px);
+  /* No overflow:hidden here: clipping the whole hero also clipped the CTA
+     buttons' drop shadow. Only the SVG scene needs clipping (see .hero-scene),
+     so the "Your albums" / "Explore the photos" buttons stay fully visible. */
+  margin-bottom: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.hero-scene {
+  line-height: 0;
+  /* Clip only the scene to the hero's rounded top corners. */
+  border-radius: calc(var(--radius) + 3px) calc(var(--radius) + 3px) 0 0;
+  overflow: hidden;
+}
+
+.hero-sky {
+  display: block;
+  width: 100%;
+  height: clamp(160px, 28vw, 240px);
+}
+
+/* The bear bobs gently; the paw waves. Both stop for reduced-motion users. */
+.hero-bear {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: bear-bob 3.5s ease-in-out infinite;
+}
+
+.hero-bear-paw {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: paw-wave 1.8s ease-in-out infinite;
+}
+
+@keyframes bear-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes paw-wave {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.hero-copy {
+  padding: 1.5rem 1.75rem 2rem;
+}
+
+.hero-kicker {
+  display: inline-block;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  margin-bottom: 0.6rem;
+}
+
+.hero-copy h1 {
+  margin: 0.2rem 0 0.5rem;
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+}
+
+.hero-copy p {
+  margin: 0 0 1.1rem;
+  max-width: 60ch;
+  color: var(--text);
+}
+
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* A soft secondary button to pair with the primary. */
+.ghost-button {
+  display: inline-block;
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.ghost-button:hover {
+  background: var(--accent-soft);
+}
+
+/* --- Themed dashboard tiles --- */
+.dashboard-tile {
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.dashboard-tile:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+}
+
+.tile-icon {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.1rem;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+/* A camera-in-the-wild glyph for Photos. */
+.tile-photos .tile-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='20' width='48' height='32' rx='6' fill='%232f6b4f'/%3E%3Crect x='24' y='14' width='16' height='8' rx='3' fill='%232f6b4f'/%3E%3Ccircle cx='32' cy='36' r='11' fill='%23e0a53f'/%3E%3Ccircle cx='32' cy='36' r='5' fill='%23fffaf0'/%3E%3C/svg%3E");
+}
+
+/* A little pine trail marker for Albums. */
+.tile-albums .tile-icon {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 6 L18 30 L26 30 L14 50 L50 50 L38 30 L46 30 Z' fill='%232f6b4f'/%3E%3Crect x='28' y='50' width='8' height='10' rx='2' fill='%236b4a32'/%3E%3C/svg%3E");
+}
+
+/* --- Trail-marker flourish on themed cards --- */
+.card-trail::before {
+  content: '';
+  position: absolute;
+  top: 1.1rem;
+  right: 1.2rem;
+  width: 26px;
+  height: 26px;
+  opacity: 0.5;
+  background-repeat: no-repeat;
+  background-size: contain;
+  /* small bear paw */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='32' cy='42' rx='14' ry='11' fill='%236b4a32'/%3E%3Ccircle cx='16' cy='26' r='6' fill='%236b4a32'/%3E%3Ccircle cx='27' cy='18' r='6' fill='%236b4a32'/%3E%3Ccircle cx='37' cy='18' r='6' fill='%236b4a32'/%3E%3Ccircle cx='48' cy='26' r='6' fill='%236b4a32'/%3E%3C/svg%3E");
+}
+
+/* --- Footer paw --- */
+.site-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.footer-paw {
+  width: 24px;
+  height: 24px;
+  opacity: 0.6;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cellipse cx='32' cy='42' rx='14' ry='11' fill='%232f6b4f'/%3E%3Ccircle cx='16' cy='26' r='6' fill='%232f6b4f'/%3E%3Ccircle cx='27' cy='18' r='6' fill='%232f6b4f'/%3E%3Ccircle cx='37' cy='18' r='6' fill='%232f6b4f'/%3E%3Ccircle cx='48' cy='26' r='6' fill='%232f6b4f'/%3E%3C/svg%3E");
+}
+
+/* --- Auth pages: show the bear mark above the form --- */
+.auth-card::before {
+  content: '';
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.5rem;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='18' cy='16' r='9' fill='%236b4a32'/%3E%3Ccircle cx='46' cy='16' r='9' fill='%236b4a32'/%3E%3Ccircle cx='18' cy='16' r='4' fill='%23e0a53f'/%3E%3Ccircle cx='46' cy='16' r='4' fill='%23e0a53f'/%3E%3Ccircle cx='32' cy='36' r='22' fill='%236b4a32'/%3E%3Cellipse cx='32' cy='42' rx='11' ry='9' fill='%23e9d7b8'/%3E%3Ccircle cx='24' cy='32' r='3.2' fill='%23241a12'/%3E%3Ccircle cx='40' cy='32' r='3.2' fill='%23241a12'/%3E%3Cellipse cx='32' cy='40' rx='3.6' ry='2.6' fill='%23241a12'/%3E%3C/svg%3E");
+}
+
+.auth-card h1 {
+  text-align: center;
+}
+
+/* Respect reduced-motion: freeze the bear and all playful transitions. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-bear,
+  .hero-bear-paw,
+  .hero-sky circle animate {
+    animation: none !important;
+  }
+  .primary-button,
+  .dashboard-tile,
+  .photo-card,
+  .site-nav a,
+  .profile-avatar,
+  .album-tile {
+    transition: none;
+  }
+}
+
+/* ====================================================================
+   Welcome page: recent-uploads feed, contribute form, approval queue
+   ==================================================================== */
+
+/* A "Pending approval" badge, warm amber so it reads as "waiting", distinct
+   from the red Hidden badge and the green Published/Everyone badge. */
+.badge-pending {
+  background: var(--honey-soft);
+  color: var(--bark, #6b4a32);
+  border: 1px solid var(--honey);
+}
+
+/* --- Recent uploads feed --- */
+.home-feed-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.home-feed-head h2 {
+  margin: 0;
+}
+
+.feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.9rem;
+  margin-top: 0.9rem;
+}
+
+/* --- Recent-photos carousel (filmstrip) --- */
+.carousel-viewport {
+  position: relative;
+  margin-top: 0.9rem;
+}
+
+.carousel-track {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem 0.2rem 0.6rem;
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.carousel-slide {
+  flex: 0 0 auto;
+  width: clamp(150px, 42%, 220px);
+  scroll-snap-align: start;
+}
+
+.carousel-slide .feed-card {
+  width: 100%;
+  margin: 0;
+}
+
+/* Prev/next controls float over the strip edges as round wooden buttons. */
+.carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 2px solid var(--bark);
+  background: var(--surface);
+  color: var(--bark);
+  font-size: 1.4rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 0 rgba(74, 52, 30, 0.2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+
+.carousel-nav:hover:not(:disabled) {
+  background: var(--pine);
+  color: var(--surface);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.carousel-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.carousel-prev {
+  left: -6px;
+}
+
+.carousel-next {
+  right: -6px;
+}
+
+.feed-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transform: rotate(-1deg);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.feed-card:nth-child(even) {
+  transform: rotate(1.2deg);
+}
+
+.feed-card:hover {
+  transform: rotate(0) translateY(-3px);
+  border-color: var(--accent);
+}
+
+.feed-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+}
+
+.feed-caption {
+  padding: 0.4rem 0.6rem 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Contribute (upload) form --- */
+.upload-form {
+  margin-top: 0.9rem;
+}
+
+.upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.upload-file {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.upload-file-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.upload-file input[type='file'] {
+  font: inherit;
+  color: var(--text);
+}
+
+.upload-caption {
+  flex: 1 1 220px;
+  display: flex;
+}
+
+.upload-caption input {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.upload-preview {
+  margin-top: 0.8rem;
+}
+
+.upload-preview img {
+  max-width: 220px;
+  max-height: 180px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  /* A slight pinned tilt to match the scrapbook feel. */
+  transform: rotate(-1.5deg);
+}
+
+.upload-hint {
+  margin: 0.6rem 0 0.8rem;
+  font-size: 0.85rem;
+}
+
+.upload-hint-error {
+  color: var(--error-text);
+}
+
+/* --- Parent approval queue --- */
+.pending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 0.9rem;
+}
+
+.pending-card {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--surface);
+  border: 1px solid var(--honey);
+  border-radius: 10px;
+  padding: 0.5rem;
+  box-shadow: var(--shadow);
+}
+
+.pending-thumb {
+  display: block;
+  line-height: 0;
+}
+
+.pending-thumb img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 7px;
+}
+
+.pending-card figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pending-caption {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pending-by {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pending-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.pending-actions .inline-form {
+  flex: 1;
+}
+
+.pending-actions button {
+  width: 100%;
+}
+
+/* --- A viewer's own contributions list --- */
+.contribution-list {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contribution-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.contribution-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex: 0 0 auto;
+}
+
+.contribution-caption {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Welcome page two-column dashboard layout --- */
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+  margin-top: 1.25rem;
+}
+
+.home-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* The side column's dashboard tiles stack vertically since the column is
+   narrow; override the auto-fit grid that suits a full-width row. */
+.home-col-side .dashboard-grid {
+  grid-template-columns: 1fr;
+  margin: 0;
+}
+
+/* The carousel section sits full width above both columns, so reset the
+   card's default top margin that other sections rely on. */
+.home-carousel {
+  margin-top: 1.25rem;
+}
+
+/* Collapse to a single column on narrower screens so nothing gets cramped. */
+@media (max-width: 720px) {
+  .home-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .carousel-slide {
+    width: clamp(150px, 70%, 240px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-card {
+    transition: none;
+  }
+
+  .carousel-nav {
+    transition: none;
+  }
+
+  .carousel-nav:hover:not(:disabled) {
+    transform: translateY(-50%);
+  }
+}
+
+/* --- Security and privacy UI (2026-11) --- */
+
+/* The audience panels and upload preview toggle the hidden attribute; make
+   sure no component display rule can override it. */
+[hidden] {
+  display: none !important;
+}
+
+.alert-info {
+  background: var(--honey-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.notice-box {
+  background: var(--accent-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.notice-box ul {
+  margin: 0.4rem 0 0.8rem 1.1rem;
+  padding: 0;
+}
+
+.notice-title {
+  font-size: 1.05rem;
+  margin: 0 0 0.3rem;
+}
+
+.badge-role {
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.danger-zone {
+  border: 1px solid var(--error-text);
+}
+
+.danger-zone .btn-danger,
+.stacked-form .btn-danger {
+  align-self: flex-start;
+}
+
+.indent {
+  margin-left: 1.75rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.request-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.request {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.request p {
+  margin: 0 0 0.4rem;
+}
+
+.setup-key code {
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  background: var(--accent-soft);
+  color: var(--text);
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.approve-form {
+  display: grid;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.approve-audience {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.4rem 0.6rem;
+  margin: 0;
+}
+
+.approve-audience legend {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.contribution-thumb-pending {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  border: 1px dashed var(--border);
+}
+
+.comment.is-removed {
+  opacity: 0.65;
+  border-left: 3px solid var(--error-text);
+  padding-left: 0.6rem;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.upload-profile {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.5rem 0;
+}
+
+.prose h2 {
+  margin-top: 1.4rem;
+}
+
+.prose ul {
+  padding-left: 1.2rem;
+}
+
+.small {
+  font-size: 0.85rem;
+}

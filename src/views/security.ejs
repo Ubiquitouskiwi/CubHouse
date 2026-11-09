@@ -1,0 +1,83 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Security</h1>
+
+  <h2>Two-step verification</h2>
+  <% if (user.mfaEnabled) { %>
+    <p>Two-step verification is <strong>on</strong>. You enter a code from your authenticator app when you sign in.</p>
+    <% if (newRecoveryCodes && newRecoveryCodes.length) { %>
+      <div class="alert alert-success" role="status">
+        <p><strong>Your recovery codes.</strong> Print or write these down now and keep them somewhere safe. Each one works once if you lose your phone. They will not be shown again.</p>
+        <ul class="recovery-codes">
+          <% newRecoveryCodes.forEach(function (c) { %><li><code><%= c %></code></li><% }) %>
+        </ul>
+      </div>
+    <% } %>
+    <p class="muted">Recovery codes left: <%= recoveryCodesLeft %>.</p>
+    <form method="post" action="/settings/security/recovery-codes" class="inline-form"
+      data-confirm="Make new recovery codes? The old ones stop working.">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="ghost-button">Make new recovery codes</button>
+    </form>
+    <% if (!mfaRequired) { %>
+      <form class="stacked-form" method="post" action="/settings/security/mfa/disable"
+        data-confirm="Turn off two-step verification?">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <label>Password <input type="password" name="password" autocomplete="current-password" required /></label>
+        <label>Current code <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required /></label>
+        <button type="submit" class="ghost-button">Turn off</button>
+      </form>
+    <% } else { %>
+      <p class="muted">Guardian accounts always keep two-step verification on.</p>
+    <% } %>
+  <% } else { %>
+    <% if (mfaRequired) { %>
+      <div class="alert alert-error"><p>Guardian accounts must turn this on before using the site.</p></div>
+    <% } %>
+    <p>
+      Add <%= siteName %> to an authenticator app (for example the one built into
+      your phone's password manager). Choose "enter a setup key" and type:
+    </p>
+    <p class="setup-key"><code><%= setup.secret %></code></p>
+    <p class="muted">
+      Or open this link on the phone that has your authenticator:
+      <a href="<%= setup.uri %>">add to authenticator</a>.
+    </p>
+    <form class="stacked-form" method="post" action="/settings/security/mfa/enable">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label>
+        Enter the 6-digit code it shows
+        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+      </label>
+      <button type="submit" class="primary-button">Turn on two-step verification</button>
+    </form>
+  <% } %>
+</section>
+
+<section class="card">
+  <h2>Reset codes</h2>
+  <p class="muted">
+    A parent can give you a one-time reset code if you forget your password
+    or lose your phone. If you got an email about a reset you did not ask
+    for, cancel it here.
+  </p>
+  <form method="post" action="/settings/security/cancel-reset">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <button type="submit" class="ghost-button">Cancel any pending reset code</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Sign out everywhere</h2>
+  <p class="muted">
+    Ends every session on every device, including this one. Use this if you
+    signed in on a shared computer or lost a phone.
+  </p>
+  <form method="post" action="/settings/security/signout-all" data-confirm="Sign out of every device?">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <button type="submit" class="ghost-button">Sign out everywhere</button>
+  </form>
+</section>
+
+<%- include('partials/footer') %>

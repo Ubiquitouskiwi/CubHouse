@@ -1,0 +1,5 @@
+#!/bin/sh
+# Refuse a commit whose staged files (contents or names) contain a forbidden name.
+# Names come from ~/.config/family-photos/forbidden-names (outside the repo).
+# Install once:  git config core.hooksPath scripts/hooks
+exec node "$(git rev-parse --show-toplevel)/scripts/check-forbidden-names.js" --staged

@@ -1,0 +1,13 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Local media and any local data (photos of the child must never be committed).
+data/
+coverage/
+*.pem
+*.key
+# Local AI-tool settings
+.kiro/settings/

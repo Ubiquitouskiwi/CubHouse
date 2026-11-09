@@ -1,0 +1,180 @@
+<%- include('partials/header') %>
+
+  <section class="card">
+    <h1>Photos</h1>
+    <p class="muted">
+      The family photo library. Every photo here is uploaded and controlled by the
+      parents. Each image carries its own permissions, so some may be downloadable
+      and others view only, and some are shared with everyone while others go to
+      specific people or groups.
+    </p>
+    <% if (libraryCan.upload) { %>
+      <p class="muted">
+        You own every photo here. Use the welcome page to add a photo, or manage
+        permissions and sharing on each image below. Photos family members send in
+        appear here once you approve them from the welcome page.
+      </p>
+      <p class="muted manage-hint">
+        Tip: click a photo to select it. Hold <kbd>Ctrl</kbd> (or <kbd>Cmd</kbd>)
+        to toggle individual photos, and <kbd>Shift</kbd> to select a range. Use
+        the toolbar to act on everything selected at once.
+      </p>
+      <p><a class="link-button" href="/photos/downloads">View download history</a></p>
+      <% } %>
+  </section>
+
+  <section class="gallery">
+    <% if (photos.length===0) { %>
+      <div class="empty-state">
+        <p>No photos to show.</p>
+        <p class="muted">
+          <% if (libraryCan.upload) { %>
+            Once photos are uploaded they appear here.
+            <% } else { %>
+              When the parents share photos with you, they appear here.
+              <% } %>
+        </p>
+      </div>
+      <% } else { %>
+
+        <% if (libraryCan.setPermissions) { %>
+          <%# Parent management toolbar. Starts inert; the selection JS enables it and keeps the count in sync. The bulk
+            form submits selected ids. %>
+            <form method="post" action="/photos/bulk" class="bulk-bar" data-bulk-form
+              data-photo-count="<%= photos.length %>">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <div class="bulk-bar-inner">
+                <label class="bulk-selectall">
+                  <input type="checkbox" data-select-all />
+                  <span data-select-count>0 selected</span>
+                </label>
+                <div class="bulk-actions" role="group" aria-label="Bulk actions">
+                  <button type="submit" name="action" value="hide" class="btn-sm" data-bulk-action
+                    disabled>Hide</button>
+                  <button type="submit" name="action" value="unhide" class="btn-sm" data-bulk-action
+                    disabled>Unhide</button>
+                  <button type="submit" name="action" value="lock-download" class="btn-sm" data-bulk-action
+                    disabled>Lock download</button>
+                  <button type="submit" name="action" value="allow-download" class="btn-sm" data-bulk-action
+                    disabled>Allow download</button>
+                  <button type="submit" name="action" value="watermark-on" class="btn-sm" data-bulk-action
+                    disabled>Watermark on</button>
+                  <button type="submit" name="action" value="watermark-off" class="btn-sm" data-bulk-action
+                    disabled>Watermark off</button>
+                  <button type="submit" name="action" value="delete" class="btn-sm btn-danger" data-bulk-action
+                    data-bulk-delete disabled>Delete</button>
+                </div>
+                <% if (profiles && profiles.length> 0) { %>
+                  <div class="bulk-profile">
+                    <label class="sr-only" for="bulk-profile-select">Upload profile</label>
+                    <select id="bulk-profile-select" name="profileId" class="btn-sm">
+                      <option value="">Detach from profile</option>
+                      <% profiles.forEach(function (p) { %>
+                        <option value="<%= p.id %>">
+                          <%= p.name %>
+                        </option>
+                        <% }); %>
+                    </select>
+                    <button type="submit" name="action" value="move-to-profile" class="btn-sm" data-bulk-action
+                      disabled>Move to profile</button>
+                  </div>
+                  <% } %>
+              </div>
+              <%# Selected photo ids are injected here as hidden inputs by the JS. %>
+                <div data-bulk-ids hidden></div>
+            </form>
+            <% } %>
+
+              <div class="photo-grid<%= libraryCan.setPermissions ? ' is-manageable' : '' %>" data-photo-grid>
+                <% photos.forEach(function (photo) { var cap=capFor(photo); %>
+                  <figure class="photo photo-card" data-photo-card data-photo-id="<%= photo.id %>">
+                    <% if (cap.setPermissions) { %>
+                      <label class="photo-select" title="Select">
+                        <input type="checkbox" data-photo-checkbox value="<%= photo.id %>" />
+                        <span class="photo-select-box" aria-hidden="true"></span>
+                      </label>
+                      <% } %>
+
+                        <button type="button" class="photo-open" data-photo-open data-src="/media/<%= photo.id %>/display"
+                          data-caption="<%= photo.caption || '' %>" data-href="/photos/<%= photo.id %>"
+                          aria-label="Open <%= photo.caption || 'photo' %>">
+                          <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Family photo' %>"
+                            loading="lazy" />
+                        </button>
+
+                        <figcaption class="photo-caption">
+                          <span class="photo-caption-text">
+                            <%= photo.caption || 'Untitled' %>
+                          </span>
+                          <span class="photo-badges">
+                            <% if (photo.pendingApproval) { %><span class="badge badge-pending">Pending approval</span>
+                              <% } %>
+                                <% if (photo.hidden) { %><span class="badge badge-hidden">Hidden</span>
+                                  <% } %>
+                                    <% if (!photo.downloadable) { %><span class="badge badge-locked">No download</span>
+                                      <% } %>
+                                        <% if (photo.watermark) { %><span class="badge badge-audience">Watermark</span>
+                                          <% } %>
+                                            <% if (photo.commentsEnabled===false) { %><span
+                                                class="badge badge-locked">Comments off</span>
+                                              <% } %>
+                                                <% if (photo.reactionsEnabled===false) { %><span
+                                                    class="badge badge-locked">Reactions off</span>
+                                                  <% } %>
+                                                    <% if (photo.audienceType==='parents' || !photo.audienceType) { %>
+                                                      <span class="badge badge-hidden">Parents only</span>
+                                                    <% } else if (photo.audienceType==='everyone' ) { %>
+                                                      <span class="badge badge-audience">Everyone</span>
+                                                      <% } else if (photo.audienceType==='groups' ) { %>
+                                                        <span class="badge badge-audience">Groups</span>
+                                                        <% } else if (photo.audienceType==='users' ) { %>
+                                                          <span class="badge badge-audience">Specific people</span>
+                                                          <% } %>
+                          </span>
+                        </figcaption>
+
+                        <div class="photo-actions">
+                          <a class="link-button" href="/photos/<%= photo.id %>">Open</a>
+                          <% if (cap.download) { %>
+                            <a class="link-button" href="/photos/<%= photo.id %>/download">Download</a>
+                            <% } %>
+                              <% if (cap.hide) { %>
+                                <form method="post" action="/photos/<%= photo.id %>/toggle-hidden" class="inline-form">
+                                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                                  <button type="submit" class="link-button">
+                                    <%= photo.hidden ? 'Unhide' : 'Hide' %>
+                                  </button>
+                                </form>
+                                <% } %>
+                                  <% if (cap.setPermissions) { %>
+                                    <form method="post" action="/photos/<%= photo.id %>/toggle-download"
+                                      class="inline-form">
+                                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                                      <button type="submit" class="link-button">
+                                        <%= photo.downloadable ? 'Lock download' : 'Allow download' %>
+                                      </button>
+                                    </form>
+                                    <% } %>
+                        </div>
+                  </figure>
+                  <% }); %>
+              </div>
+              <% } %>
+  </section>
+
+  <!-- Lightbox overlay. Opened by clicking a photo; zoom toggles on click. -->
+  <div class="lightbox" data-lightbox hidden>
+    <button type="button" class="lightbox-close" data-lightbox-close aria-label="Close">&times;</button>
+    <figure class="lightbox-figure">
+      <img class="lightbox-image" data-lightbox-image src="" alt="" />
+      <figcaption class="lightbox-caption" data-lightbox-caption></figcaption>
+    </figure>
+    <a class="lightbox-open-page" data-lightbox-page href="#">Open full details</a>
+  </div>
+
+  <script src="/lightbox.js"></script>
+  <% if (libraryCan.setPermissions) { %>
+    <script src="/photo-select.js"></script>
+    <% } %>
+
+      <%- include('partials/footer') %>

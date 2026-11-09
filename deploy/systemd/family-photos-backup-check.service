@@ -1,0 +1,21 @@
+# "Backup didn't run" check. Fails, and so emails ALERT_EMAIL, when the last
+# successful backup is older than 26 hours or has never happened. This is
+# what catches a timer that never fires or a host that was down.
+
+[Unit]
+Description=Family photo site: check that last night's backup succeeded
+OnFailure=family-photos-alert@%n.service
+
+[Service]
+Type=oneshot
+User=family-photos-backup
+Group=family-photos-backup
+Environment=BACKUP_STATE_DIR=/var/lib/family-photos-backup BACKUP_MAX_AGE_HOURS=26
+ExecStart=/opt/family-photos/deploy/backup-check.sh
+ReadOnlyPaths=/var/lib/family-photos-backup
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateNetwork=true
+CapabilityBoundingSet=

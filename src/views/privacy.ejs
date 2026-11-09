@@ -1,0 +1,67 @@
+<%- include('partials/header') %>
+
+<section class="card prose">
+  <h1>Privacy notice</h1>
+  <p class="muted">Version <%= noticeVersion %></p>
+
+  <h2>Who runs this site</h2>
+  <p>
+    <%= siteName %> is a private photo site run by the child's parents (the
+    "guardians") to share photos with invited family. The guardians decide
+    what is shared and with whom. There are no ads, no analytics, no
+    third-party trackers, and nothing is ever sold or shared with anyone else.
+  </p>
+
+  <h2>The child</h2>
+  <p>
+    The child in these photos cannot consent for themselves, so we treat
+    their privacy as the top priority. Every photo starts out visible only to
+    the guardians. Location, camera, and device details are removed from every
+    photo when it is uploaded. When the child is older, the guardians can hand
+    over or permanently erase the whole archive.
+  </p>
+
+  <h2>What we keep about family members</h2>
+  <ul>
+    <li><strong>Your account:</strong> email, name, an optional username, and a scrambled (hashed) password.</li>
+    <li><strong>What you add:</strong> comments, reactions, personal albums, and photos you send in.</li>
+    <li><strong>Downloads:</strong> which photo you downloaded, when, and the first part of your network address. These records are deleted after <%= downloadRetentionDays %> days.</li>
+    <li><strong>Security records:</strong> sign-ins and important changes, so the guardians can see if something goes wrong. Details are removed after <%= auditRetentionDays %> days.</li>
+  </ul>
+
+  <h2>Downloads are traced</h2>
+  <p>
+    If the guardians let you download a photo, the copy you get carries a
+    hidden reference code and usually a small visible mark. The code does not
+    contain your name; only the guardians can look it up. This exists so a
+    photo that ends up somewhere it should not be can be traced. Please keep
+    downloaded photos private.
+  </p>
+
+  <h2>Your choices</h2>
+  <ul>
+    <li>Download everything we hold about you: Settings, Export my data.</li>
+    <li>Delete your account: Settings, Delete account. You choose whether your comments are removed or kept without your name.</li>
+    <li>Photos you already downloaded stay on your device; please delete them if asked.</li>
+  </ul>
+
+  <h2>Where data lives</h2>
+  <p>
+    Photos are encrypted and stored in a private storage bucket. Account data
+    is stored in an encrypted database. Both are hosted by our cloud provider
+    under a data processing agreement. Backups expire within 30 days, so
+    anything deleted is fully gone from backups within that time.
+  </p>
+
+  <h2>Questions</h2>
+  <p>Ask the guardians directly. They can see the security records and act on any request.</p>
+
+  <% if (needsAccept) { %>
+    <form method="post" action="/privacy/accept" class="stacked-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <button type="submit" class="primary-button">I have read this notice</button>
+    </form>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

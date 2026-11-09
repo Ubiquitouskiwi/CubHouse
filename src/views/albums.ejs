@@ -1,0 +1,39 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Your albums</h1>
+  <p class="muted">
+    Albums are your own. Group your favorite photos into personal collections
+    that only you manage. Building an album never changes who can see or
+    download a photo. Those permissions stay with the parents.
+  </p>
+
+  <form method="post" action="/albums" class="inline-generate">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      New album name
+      <input type="text" name="name" placeholder="e.g. Summer favorites" maxlength="80" required />
+    </label>
+    <button type="submit" class="primary-button">Create album</button>
+  </form>
+</section>
+
+<section class="gallery">
+  <% if (albums.length === 0) { %>
+    <div class="empty-state">
+      <p>No albums yet.</p>
+      <p class="muted">Create your first album above, then add photos to it from the Photos page.</p>
+    </div>
+  <% } else { %>
+    <div class="album-grid">
+      <% albums.forEach(function (album) { %>
+        <a class="album-tile" href="/albums/<%= album.id %>">
+          <span class="album-title"><%= album.name %></span>
+          <span class="album-count"><%= album.photoCount %> <%= album.photoCount === 1 ? 'photo' : 'photos' %></span>
+        </a>
+      <% }); %>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

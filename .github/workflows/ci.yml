@@ -1,0 +1,100 @@
+# Required checks before merge. Third-party actions are pinned to commit SHAs
+# (Dependabot keeps them current) so a moved tag cannot run new code here.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint, test, audit (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Lint (including eslint-plugin-security)
+        run: npm run lint
+      - name: Tests (in-memory store)
+        run: npm test
+      - name: Production dependency audit
+        run: npm run audit:prod
+      - name: Production boot refuses unsafe configuration
+        run: |
+          if NODE_ENV=production timeout 20 node src/server.js; then
+            echo "Production booted with no secrets configured" >&2
+            exit 1
+          fi
+      - name: Shell scripts pass shellcheck
+        run: shellcheck deploy/*.sh
+
+  forbidden-names:
+    name: No real names in files or commit messages
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # every commit message, not just the last
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      # The names live ONLY in the FORBIDDEN_NAMES secret (one per line), never in the
+      # repository. Without it (unset, or a fork's pull request) the step prints SKIPPED.
+      - name: Check tracked files and commit messages
+        env:
+          FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
+        run: node scripts/check-forbidden-names.js --tree --messages
+
+  postgres:
+    name: Tests against PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        # Throwaway database for the test run only.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: family_photos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Whole suite against PgStore
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/family_photos_test
+        run: npm run test:pg

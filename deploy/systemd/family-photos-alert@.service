@@ -1,0 +1,19 @@
+# Operator alert. Other units use  OnFailure=family-photos-alert@%n.service  and this
+# emails ALERT_EMAIL through SMTP_URL (both in the env file), naming the unit
+# that failed. Test it:  sudo systemctl start family-photos-alert@test.service
+
+[Unit]
+Description=Family photo site: email an alert that %i failed
+
+[Service]
+Type=oneshot
+User=family-photos
+Group=family-photos
+EnvironmentFile=/etc/family-photos/app.env
+WorkingDirectory=/opt/family-photos
+ExecStart=/usr/bin/node scripts/send-alert.js %i
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=

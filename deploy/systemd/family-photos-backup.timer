@@ -1,0 +1,11 @@
+[Unit]
+Description=Family photo site: run the encrypted backup nightly
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+# Catch up after the droplet was off at 03:15.
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

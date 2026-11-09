@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Packages that must move together, or `npm ci` fails on peer ranges.
+      eslint:
+        patterns: ['eslint', '@eslint/*', 'eslint-plugin-*', 'globals']
+      aws-sdk:
+        patterns: ['@aws-sdk/*']
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+    commit-message:
+      prefix: build
+      include: scope
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    # One pull request for all action updates, so workflows move together.
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci

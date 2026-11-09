@@ -1,0 +1,79 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <p><a href="/photos">&larr; Back to photos</a></p>
+  <h1>Download history</h1>
+  <p class="muted">
+    Every photo download is recorded here: who, which photo, when, and the
+    first part of their network address. Each downloaded copy carries a hidden
+    reference, and usually a visible "Ref" code in the corner. Records are
+    deleted after <%= retentionDays %> days.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Trace a copy you found</h2>
+  <p class="muted">
+    If a photo turns up somewhere it should not be, upload that copy here. We
+    read its hidden reference and look it up. The file is not stored. If it
+    was screenshotted, look for the "Ref" code printed on the image and find
+    it in the table below.
+  </p>
+  <form method="post" action="/photos/trace" enctype="multipart/form-data" class="inline-generate">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Image file
+      <input type="file" name="image" accept="image/*" required />
+    </label>
+    <button type="submit" class="primary-button">Look it up</button>
+  </form>
+  <% if (traceResult) { %>
+    <% if (traceResult.found) { %>
+      <div class="alert alert-success">
+        <p>
+          This copy was downloaded by <strong><%= traceResult.download.userDisplayName || 'a former member' %></strong>
+          on <%= traceResult.download.downloadedAt.replace('T', ' ').slice(0, 16) %> (Ref <%= traceResult.download.ref %>).
+        </p>
+      </div>
+    <% } else { %>
+      <div class="alert alert-error"><p><%= traceResult.message %></p></div>
+    <% } %>
+  <% } %>
+</section>
+
+<section class="card">
+  <% if (downloads.length === 0) { %>
+    <p class="muted">No downloads have been recorded yet.</p>
+  <% } else { %>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>Ref</th><th>Who</th><th>Photo</th><th>When</th><th>Network</th><th>Marks</th></tr>
+        </thead>
+        <tbody>
+          <% downloads.forEach(function (d) { %>
+            <tr>
+              <td><code><%= d.ref %></code></td>
+              <td><%= d.userDisplayName || 'Former member' %></td>
+              <td>
+                <% if (d.photoDeleted) { %>
+                  <span class="muted">(photo deleted)</span>
+                <% } else if (d.photoId) { %>
+                  <a href="/photos/<%= d.photoId %>"><%= d.caption || 'Open photo' %></a>
+                <% } %>
+              </td>
+              <td><%= d.downloadedAt.replace('T', ' ').slice(0, 16) %></td>
+              <td><%= d.ipNet || 'unknown' %></td>
+              <td>
+                <% if (d.metadataEmbedded) { %><span class="badge badge-audience">Hidden ref</span><% } %>
+                <% if (d.watermarked) { %><span class="badge badge-audience">Visible mark</span><% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

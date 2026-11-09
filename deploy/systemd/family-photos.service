@@ -1,0 +1,44 @@
+# systemd unit with sandboxing. Install:
+#   sudo cp deploy/systemd/family-photos.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now family-photos
+# Secrets live in /etc/family-photos/app.env (root:family-photos, mode 0640), never in git.
+
+[Unit]
+Description=Family photo site
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=family-photos
+Group=family-photos
+WorkingDirectory=/opt/family-photos
+EnvironmentFile=/etc/family-photos/app.env
+Environment=NODE_ENV=production HOST=127.0.0.1 PORT=3000 TRUST_PROXY_HOPS=1
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+UMask=0077
+# Production writes nothing to local disk (media is in Spaces, logs go to the
+# journal), so the whole filesystem stays read-only for this service.
+
+[Install]
+WantedBy=multi-user.target

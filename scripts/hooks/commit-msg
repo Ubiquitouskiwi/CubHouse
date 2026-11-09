@@ -1,0 +1,3 @@
+#!/bin/sh
+# Refuse a commit message that contains a forbidden name (same names file).
+exec node "$(git rev-parse --show-toplevel)/scripts/check-forbidden-names.js" --message-file "$1"

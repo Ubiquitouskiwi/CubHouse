@@ -1,0 +1,17 @@
+# Keep secrets, local data, history and tooling out of the build context and
+# the image. The Dockerfile copies only what it names; this is the backstop.
+.git
+.github
+.kiro
+.env
+.env.*
+node_modules
+data
+media
+coverage
+test
+docs
+*.log
+*.pem
+*.key
+.DS_Store

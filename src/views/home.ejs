@@ -1,0 +1,352 @@
+<%- include('partials/header') %>
+
+  <section class="hero">
+    <!-- A cartoon outdoor scene: layered hills, pine trees, a sun, and a friendly
+       waving bear. Pure inline SVG so there is no image dependency, and it
+       recolors with the theme through currentColor-ish fills kept legible in
+       both light and dark. -->
+    <div class="hero-scene" aria-hidden="true">
+      <svg viewBox="0 0 800 260" preserveAspectRatio="xMidYMax slice" class="hero-sky">
+        <!-- sky -->
+        <rect width="800" height="260" fill="var(--sky)" />
+        <!-- sun -->
+        <circle cx="660" cy="70" r="34" fill="var(--honey)" />
+        <circle cx="660" cy="70" r="34" fill="var(--honey)" opacity="0.4">
+          <animate attributeName="r" values="34;38;34" dur="4s" repeatCount="indefinite" />
+        </circle>
+        <!-- far mountains -->
+        <path d="M0 180 L140 90 L260 180 Z" fill="var(--pine-deep)" opacity="0.5" />
+        <path d="M180 180 L340 70 L520 180 Z" fill="var(--pine-deep)" opacity="0.55" />
+        <path d="M430 180 L600 100 L780 180 Z" fill="var(--pine-deep)" opacity="0.5" />
+        <!-- ground hill -->
+        <path d="M0 180 Q400 120 800 180 L800 260 L0 260 Z" fill="var(--pine)" />
+        <!-- pine trees -->
+        <g fill="var(--pine-deep)">
+          <path d="M90 200 L75 230 L105 230 Z M90 185 L78 212 L102 212 Z" />
+          <path d="M150 210 L138 234 L162 234 Z M150 198 L140 220 L160 220 Z" />
+          <path d="M700 205 L686 232 L714 232 Z M700 192 L689 216 L711 216 Z" />
+          <path d="M620 212 L610 234 L630 234 Z" />
+        </g>
+        <!-- waving bear -->
+        <g class="hero-bear">
+          <ellipse cx="400" cy="232" rx="54" ry="24" fill="var(--pine-deep)" opacity="0.25" />
+          <!-- body -->
+          <circle cx="400" cy="200" r="40" fill="var(--bark)" />
+          <!-- ears -->
+          <circle cx="372" cy="168" r="13" fill="var(--bark)" />
+          <circle cx="428" cy="168" r="13" fill="var(--bark)" />
+          <circle cx="372" cy="168" r="6" fill="var(--honey)" />
+          <circle cx="428" cy="168" r="6" fill="var(--honey)" />
+          <!-- muzzle -->
+          <ellipse cx="400" cy="210" rx="20" ry="16" fill="#e9d7b8" />
+          <!-- eyes + nose -->
+          <circle cx="388" cy="194" r="4.5" fill="#241a12" />
+          <circle cx="412" cy="194" r="4.5" fill="#241a12" />
+          <ellipse cx="400" cy="206" rx="6" ry="4.5" fill="#241a12" />
+          <!-- waving paw -->
+          <g class="hero-bear-paw">
+            <circle cx="446" cy="176" r="12" fill="var(--bark)" />
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="hero-copy">
+      <span class="hero-kicker">Welcome to the den</span>
+      <h1>Hi <%= user.displayName %>, grab a cozy seat</h1>
+      <p>
+        This is our private family campground for photos. You are signed in as
+        <strong>
+          <%= roleLabel %>
+        </strong>. Wander the gallery, make your own
+        albums, and keep the little moments close.
+      </p>
+      <div class="hero-cta">
+        <a class="primary-button" href="/photos">Explore the photos</a>
+        <a class="ghost-button" href="/albums">Your albums</a>
+      </div>
+    </div>
+  </section>
+
+  <%# --- Recent uploads carousel: the newest photos this viewer can see, up top as a horizontally scrolling filmstrip
+    with prev/next controls. --- %>
+    <section class="card card-trail home-carousel" data-carousel aria-roledescription="carousel"
+      aria-label="Recently uploaded photos">
+      <div class="home-feed-head">
+        <h2>Fresh from the trail</h2>
+        <a class="link-button" href="/photos">See all photos</a>
+      </div>
+      <% if (recentPhotos && recentPhotos.length> 0) { %>
+        <div class="carousel-viewport">
+          <button type="button" class="carousel-nav carousel-prev" data-carousel-prev
+            aria-label="Previous photos">&#8249;</button>
+          <ul class="carousel-track" data-carousel-track>
+            <% recentPhotos.forEach(function (photo) { %>
+              <li class="carousel-slide">
+                <a class="feed-card" href="/photos/<%= photo.id %>">
+                  <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Family photo' %>"
+                    loading="lazy" />
+                  <span class="feed-caption">
+                    <%= photo.caption || 'Untitled' %>
+                  </span>
+                </a>
+              </li>
+              <% }); %>
+          </ul>
+          <button type="button" class="carousel-nav carousel-next" data-carousel-next
+            aria-label="Next photos">&#8250;</button>
+        </div>
+        <% } else { %>
+          <p class="muted">
+            No photos to show yet. When photos are shared with you, the newest ones
+            land here.
+          </p>
+          <% } %>
+    </section>
+
+    <%# --- Two-column dashboard area. The left column carries the main actions (upload, approvals/contributions); the
+      right column carries the at-a-glance stats tiles and the role card. On narrow screens it collapses to one. --- %>
+      <div class="home-columns">
+        <div class="home-col home-col-main">
+
+          <%# --- Parent approval queue: photos family members contributed, awaiting review. Shown only to parents, and
+            only when something is waiting. --- %>
+            <% if (photoCan.setPermissions && pendingPhotos && pendingPhotos.length> 0) { %>
+              <section class="card card-trail home-approvals">
+                <h2>Waiting for your approval</h2>
+                <p class="muted">
+                  Family members sent these photos in. Location and camera details were
+                  already removed. They stay private until you approve them and choose
+                  who may see them. Sharing with the whole family needs the other
+                  guardian's approval.
+                </p>
+                <div class="pending-grid">
+                  <% pendingPhotos.forEach(function (photo) { %>
+                    <figure class="pending-card">
+                      <a class="pending-thumb" href="/photos/<%= photo.id %>">
+                        <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Contributed photo' %>"
+                          loading="lazy" />
+                      </a>
+                      <figcaption>
+                        <span class="pending-caption">
+                          <%= photo.caption || 'Untitled' %>
+                        </span>
+                        <span class="pending-by">by <%= photo.uploadedByName || 'a family member' %></span>
+                      </figcaption>
+                      <div class="pending-actions">
+                        <form method="post" action="/photos/<%= photo.id %>/approve" class="approve-form" data-audience-scope>
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                          <fieldset class="approve-audience">
+                            <legend>Who may see it?</legend>
+                            <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.PARENTS %>" data-aud-radio required /> Parents only</label>
+                            <% if (groups.length > 0) { %>
+                              <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.GROUPS %>" data-aud-radio /> Groups</label>
+                              <div class="audience-list" data-aud-panel="<%= audiences.GROUPS %>">
+                                <% groups.forEach(function (g) { %>
+                                  <label class="checkbox-row"><input type="checkbox" name="audienceGroupIds" value="<%= g.id %>" /> <%= g.name %></label>
+                                <% }); %>
+                              </div>
+                            <% } %>
+                            <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.EVERYONE %>" data-aud-radio /> Whole family</label>
+                          </fieldset>
+                          <button type="submit" class="btn-sm">Approve</button>
+                        </form>
+                        <form method="post" action="/photos/<%= photo.id %>/reject" class="inline-form"
+                          data-confirm="Reject and permanently delete this photo?">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                          <button type="submit" class="btn-sm btn-danger">Reject</button>
+                        </form>
+                      </div>
+                    </figure>
+                    <% }); %>
+                </div>
+              </section>
+              <% } %>
+
+                <%# --- Contribute a photo. Everyone who can contribute gets this. For a family member it explains the
+                  photo goes to the parents for approval. --- %>
+                  <% if (photoCan.contribute) { %>
+                    <section class="card card-trail home-upload">
+                      <h2>Add a photo</h2>
+                      <% if (photoCan.setPermissions) { %>
+                        <p class="muted">
+                          Add a picture to the family library. It starts private (parents only)
+                          unless you pick an upload profile. Location and camera details are
+                          removed automatically.
+                        </p>
+                        <% } else { %>
+                          <p class="muted">
+                            Share a picture with the family. The parents own the library, so
+                            your upload goes to them for approval first. Once they say yes, it
+                            shows up for everyone it is shared with.
+                          </p>
+                          <% } %>
+                            <form method="post" action="/photos/upload" class="upload-form" data-upload-form
+                              enctype="multipart/form-data">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                                <div class="upload-row">
+                                  <label class="upload-file">
+                                    <span class="upload-file-label">Choose a photo</span>
+                                    <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/avif"
+                                      data-upload-input required />
+                                  </label>
+                                  <label class="upload-caption">
+                                    <span class="sr-only">Caption</span>
+                                    <input type="text" name="caption" maxlength="200"
+                                      placeholder="Add a caption (optional)" />
+                                  </label>
+                                </div>
+                                <% if (photoCan.setPermissions && profiles.length > 0) { %>
+                                  <label class="upload-profile">
+                                    Share using a profile (optional)
+                                    <select name="profileId">
+                                      <option value="">Keep it private for now</option>
+                                      <% profiles.forEach(function (p) { %>
+                                        <option value="<%= p.id %>"><%= p.name %></option>
+                                      <% }); %>
+                                    </select>
+                                  </label>
+                                <% } %>
+                                <div class="upload-preview" data-upload-preview hidden>
+                                  <img data-upload-preview-img alt="Selected photo preview" />
+                                </div>
+                                <p class="upload-hint muted">JPEG, PNG, WebP, or AVIF, up to 15 MB. Captions: please skip full names, schools, and addresses.</p>
+                                <button type="submit" class="primary-button" data-upload-submit disabled>
+                                  <%= photoCan.setPermissions ? 'Upload photo' : 'Send to parents' %>
+                                </button>
+                            </form>
+                    </section>
+                    <% } %>
+
+                      <%# --- The viewer's own recent contributions, with approval status. Shown to non-parents (parents
+                        see the queue above instead). --- %>
+                        <% if (!photoCan.setPermissions && myUploads && myUploads.length> 0) { %>
+                          <section class="card card-trail home-contributions">
+                            <h2>Photos you sent in</h2>
+                            <p class="muted">
+                              Pictures you shared with the family. Pending ones are waiting on a
+                              parent; approved ones are live.
+                            </p>
+                            <ul class="contribution-list">
+                              <% myUploads.forEach(function (photo) { %>
+                                <li class="contribution-item">
+                                  <% if (!photo.visibleToMe) { %>
+                                    <span class="contribution-thumb contribution-thumb-pending" aria-hidden="true"></span>
+                                  <% } else { %>
+                                    <img class="contribution-thumb" src="/media/<%= photo.id %>/thumb" alt=""
+                                      loading="lazy" />
+                                  <% } %>
+                                  <span class="contribution-caption">
+                                    <%= photo.caption || 'Untitled' %>
+                                  </span>
+                                  <% if (photo.pendingApproval) { %>
+                                    <span class="badge badge-hidden">Pending approval</span>
+                                    <% } else { %>
+                                      <span class="badge badge-audience">Published</span>
+                                      <% } %>
+                                </li>
+                                <% }); %>
+                            </ul>
+                          </section>
+                          <% } %>
+
+        </div>
+
+        <aside class="home-col home-col-side">
+
+          <section class="dashboard-grid">
+            <a class="dashboard-tile tile-photos" href="/photos">
+              <span class="tile-icon" aria-hidden="true"></span>
+              <span class="dashboard-tile-title">Photos</span>
+              <span class="dashboard-tile-value">
+                <%= photoCount %>
+              </span>
+              <span class="dashboard-tile-sub">in the family library</span>
+            </a>
+            <a class="dashboard-tile tile-albums" href="/albums">
+              <span class="tile-icon" aria-hidden="true"></span>
+              <span class="dashboard-tile-title">Your albums</span>
+              <span class="dashboard-tile-value">
+                <%= albumCount %>
+              </span>
+              <span class="dashboard-tile-sub">personal favorites</span>
+            </a>
+          </section>
+
+          <% if (can.manageMembers && governancePending && governancePending.length > 0) { %>
+            <section class="card card-trail">
+              <h2>Waiting on a guardian</h2>
+              <p class="muted"><%= governancePending.length %> protected change(s) need a guardian's decision.</p>
+              <p><a class="primary-button" href="/admin#governance">Review requests</a></p>
+            </section>
+          <% } %>
+          <% if (can.manageMembers) { %>
+            <section class="card card-trail">
+              <h2>Parent controls</h2>
+              <p class="muted">
+                You are the ranger here. You can upload photos, set per-photo
+                permissions, create upload profiles, and invite family members.
+              </p>
+              <% if (stats) { %>
+                <ul class="stat-list">
+                  <li><strong>
+                      <%= stats.memberCount %>
+                    </strong> members</li>
+                  <li><strong>
+                      <%= stats.openCodeCount %>
+                    </strong> unused access codes</li>
+                  <li><strong>
+                      <%= stats.usedCodeCount %>
+                    </strong> used access codes</li>
+                </ul>
+                <% } %>
+                  <p><a class="primary-button" href="/admin">Open the ranger station</a></p>
+            </section>
+            <% } else if (can.viewAdminDashboard) { %>
+              <section class="card card-trail">
+                <h2>Developer view</h2>
+                <p class="muted">
+                  You have elevated portal access for maintenance and diagnostics. For
+                  photos you have the same access as a family member: you can send
+                  photos in for a parent to approve, but you cannot publish, delete, or
+                  change photo permissions. Parents control all images.
+                </p>
+                <% if (stats) { %>
+                  <ul class="stat-list">
+                    <li><strong>
+                        <%= stats.memberCount %>
+                      </strong> members</li>
+                    <li><strong>
+                        <%= stats.openCodeCount %>
+                      </strong> unused access codes</li>
+                    <li><strong>
+                        <%= stats.usedCodeCount %>
+                      </strong> used access codes</li>
+                  </ul>
+                  <% } %>
+                    <p><a class="primary-button" href="/admin">Open the admin page (read-only)</a></p>
+              </section>
+              <% } else { %>
+                <section class="card card-trail">
+                  <h2>Getting started</h2>
+                  <p class="muted">
+                    Follow the trail: browse the family photos, then build your own albums
+                    to keep track of your favorites. You can download the photos the
+                    parents have made available, and leave a comment or a reaction on the
+                    ones you love.
+                  </p>
+                </section>
+                <% } %>
+
+        </aside>
+      </div>
+
+      <% if (photoCan.contribute) { %>
+        <script src="/photo-upload.js"></script>
+        <% } %>
+
+          <% if (recentPhotos && recentPhotos.length> 0) { %>
+            <script src="/photo-carousel.js"></script>
+            <% } %>
+
+              <%- include('partials/footer') %>

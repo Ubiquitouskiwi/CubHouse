@@ -1,0 +1,10 @@
+[Unit]
+Description=Family photo site: daily backup freshness check
+
+[Timer]
+# Well after the 03:15 backup window.
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

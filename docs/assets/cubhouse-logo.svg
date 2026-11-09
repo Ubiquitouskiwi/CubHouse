@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title desc">
+  <title id="title">Cubhouse logo</title>
+  <desc id="desc">A bear cub peeking out of a rounded den doorway, with a pine tree beside it, on a forest-green badge.</desc>
+  <!-- Badge -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#2f6b4f"/>
+  <!-- Ground -->
+  <path d="M8 196 H248 V192 Q248 248 192 248 H64 Q8 248 8 192 Z" fill="#234e3a"/>
+  <!-- Pine tree -->
+  <g fill="#bfe3e8" opacity="0.9">
+    <path d="M200 70 L222 112 H178 Z"/>
+    <path d="M200 92 L228 142 H172 Z"/>
+    <rect x="196" y="142" width="8" height="18" fill="#6b4a32" opacity="1"/>
+  </g>
+  <!-- Den mound -->
+  <path d="M34 200 Q34 92 128 92 Q222 92 222 200 Z" fill="#6b4a32"/>
+  <!-- Den doorway -->
+  <path d="M74 200 Q74 128 128 128 Q182 128 182 200 Z" fill="#33291f"/>
+  <!-- Bear cub: ears -->
+  <circle cx="102" cy="150" r="13" fill="#a87b55"/>
+  <circle cx="154" cy="150" r="13" fill="#a87b55"/>
+  <circle cx="102" cy="150" r="6" fill="#e0a53f"/>
+  <circle cx="154" cy="150" r="6" fill="#e0a53f"/>
+  <!-- Bear cub: head -->
+  <ellipse cx="128" cy="176" rx="34" ry="30" fill="#a87b55"/>
+  <!-- Muzzle -->
+  <ellipse cx="128" cy="186" rx="15" ry="11" fill="#f3ecdc"/>
+  <ellipse cx="128" cy="181" rx="6" ry="4" fill="#33291f"/>
+  <!-- Eyes -->
+  <circle cx="115" cy="170" r="4" fill="#33291f"/>
+  <circle cx="141" cy="170" r="4" fill="#33291f"/>
+  <!-- Paws resting on the doorway edge -->
+  <ellipse cx="104" cy="203" rx="13" ry="8" fill="#a87b55"/>
+  <ellipse cx="152" cy="203" rx="13" ry="8" fill="#a87b55"/>
+  <!-- Sun -->
+  <circle cx="62" cy="62" r="16" fill="#e0a53f"/>
+</svg>

@@ -1,0 +1,355 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Admin</h1>
+  <% if (can.manageMembers) { %>
+    <p class="muted">
+      Invite family, manage who can see what, and review every important change.
+      Restricting access always works instantly. Widening access or erasing
+      photos needs the other guardian.
+    </p>
+    <p>
+      <a class="link-button" href="/admin/audit">Audit trail</a>
+      <a class="link-button" href="/photos/downloads">Download history</a>
+    </p>
+  <% } else { %>
+    <p class="muted">Read-only view for development. Member emails and invite codes are visible to guardians only.</p>
+  <% } %>
+</section>
+
+<% if (can.manageMembers) { %>
+<section class="card" id="governance">
+  <h2>Changes waiting on a guardian</h2>
+  <% var pending = governanceRequests.filter(function (r) { return r.status === 'pending'; }); %>
+  <% if (pending.length === 0) { %>
+    <p class="muted">Nothing is waiting.</p>
+  <% } else { %>
+    <ul class="request-list">
+      <% pending.forEach(function (r) { %>
+        <li class="request">
+          <p><strong><%= r.summary %></strong></p>
+          <p class="muted">
+            Asked by <%= r.requestedByName %> on <%= r.createdAt.replace('T', ' ').slice(0, 16) %>.
+            <% if (r.executeAfter) { %>Takes effect after <%= r.executeAfter.replace('T', ' ').slice(0, 16) %> unless cancelled.<% } %>
+          </p>
+          <% if (!r.mine && !r.executeAfter) { %>
+            <form method="post" action="/admin/governance/<%= r.id %>/approve" class="inline-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="btn-sm">Approve</button>
+            </form>
+          <% } %>
+          <form method="post" action="/admin/governance/<%= r.id %>/decline" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button type="submit" class="btn-sm btn-danger"><%= r.mine ? 'Cancel' : 'Decline' %></button>
+          </form>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</section>
+
+<section class="card">
+  <h2>Invite a family member</h2>
+  <p class="muted">
+    Codes work once and expire after <%= codeTtlHours %> hours. Binding a code
+    to the person's email means a forwarded code is useless to anyone else.
+  </p>
+  <form method="post" action="/admin/access-codes" class="stacked-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Their email (recommended)
+      <input type="email" name="intendedEmail" placeholder="grandma@example.com" />
+    </label>
+    <label>
+      Note (e.g. "for Grandma")
+      <input type="text" name="note" maxlength="200" />
+    </label>
+    <label>
+      Add them to a group (optional)
+      <select name="groupId">
+        <option value="">No group</option>
+        <% groups.forEach(function (g) { %>
+          <option value="<%= g.id %>"><%= g.name %></option>
+        <% }); %>
+      </select>
+    </label>
+    <button type="submit" class="primary-button">Request invite code</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Invite codes</h2>
+  <% if (accessCodes.length === 0) { %>
+    <p class="muted">No codes yet.</p>
+  <% } else { %>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Code</th><th>For</th><th>Group</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+        <tbody>
+          <% accessCodes.forEach(function (ac) { %>
+            <tr>
+              <td><% if (ac.status === 'open') { %><code><%= ac.code %></code><% } else { %><span class="muted">hidden</span><% } %></td>
+              <td><%= ac.note || '' %><% if (ac.intendedEmail) { %><br /><span class="muted"><%= ac.intendedEmail %></span><% } %></td>
+              <td><%= ac.groupName || '' %></td>
+              <td>
+                <% if (ac.status === 'used') { %><span class="badge badge-used">Used by <%= ac.usedByName %></span>
+                <% } else if (ac.status === 'revoked') { %><span class="badge badge-locked">Revoked</span>
+                <% } else if (ac.status === 'expired') { %><span class="badge badge-locked">Expired</span>
+                <% } else { %><span class="badge badge-open">Open</span><% } %>
+              </td>
+              <td><%= ac.expiresAt ? ac.expiresAt.replace('T', ' ').slice(0, 16) : '' %></td>
+              <td>
+                <% if (ac.status === 'open') { %>
+                  <form method="post" action="/admin/access-codes/<%= encodeURIComponent(ac.code) %>/revoke" class="inline-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <button type="submit" class="link-button danger">Revoke</button>
+                  </form>
+                <% } %>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+<% } %>
+
+<section class="card" id="members">
+  <h2>Members</h2>
+  <div class="table-scroll">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <% if (can.viewMemberContact) { %><th>Email</th><% } %>
+          <th>Role</th>
+          <th>Groups</th>
+          <th>Status</th>
+          <% if (can.manageMembers) { %><th>Actions</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function (u) { %>
+          <tr>
+            <td><%= u.displayName %></td>
+            <% if (can.viewMemberContact) { %><td><%= u.email %></td><% } %>
+            <td><%= u.roleLabel %></td>
+            <td><%= u.groupNames.join(', ') %></td>
+            <td>
+              <% if (u.disabled) { %><span class="badge badge-locked">Removed</span><% } %>
+              <% if (u.commentsMuted) { %><span class="badge badge-hidden">Muted</span><% } %>
+              <% if (u.mfaEnabled) { %><span class="badge badge-audience">2-step on</span><% } %>
+            </td>
+            <% if (can.manageMembers) { %>
+              <td>
+                <% if (u.id !== currentUserId) { %>
+                  <% if (!u.disabled) { %>
+                    <form method="post" action="/admin/members/<%= u.id %>/remove" class="inline-form"
+                      data-confirm="Remove <%= u.displayName %>? They are signed out everywhere immediately and lose all access.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="link-button danger">Remove and revoke</button>
+                    </form>
+                    <form method="post" action="/admin/members/<%= u.id %>/reset-signin" class="inline-form"
+                      data-confirm="Issue a one-time reset code for <%= u.displayName %>? It replaces their password and two-step verification.">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="link-button">Reset sign-in</button>
+                    </form>
+                    <% if (u.role !== 'parent') { %>
+                      <form method="post" action="/admin/members/<%= u.id %>/mute" class="inline-form">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                        <% if (!u.commentsMuted) { %><input type="hidden" name="muted" value="on" /><% } %>
+                        <button type="submit" class="link-button"><%= u.commentsMuted ? 'Unmute' : 'Mute comments' %></button>
+                      </form>
+                    <% } %>
+                    <form method="post" action="/admin/members/<%= u.id %>/role" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <select name="role" aria-label="Role for <%= u.displayName %>">
+                        <option value="user" <%= u.role === 'user' ? 'selected' : '' %>>Family member</option>
+                        <option value="parent" <%= u.role === 'parent' ? 'selected' : '' %>>Parent</option>
+                      </select>
+                      <button type="submit" class="link-button">Change role</button>
+                    </form>
+                  <% } else { %>
+                    <form method="post" action="/admin/members/<%= u.id %>/restore" class="inline-form">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                      <button type="submit" class="link-button">Restore access</button>
+                    </form>
+                  <% } %>
+                <% } else { %>
+                  <span class="muted">You</span>
+                <% } %>
+              </td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Groups</h2>
+  <p class="muted">Share photos with a whole group at once. Removing someone from a group is instant; adding someone needs the other guardian.</p>
+  <% if (can.manageMembers) { %>
+    <form method="post" action="/admin/groups" class="inline-generate">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label>Group name <input type="text" name="name" maxlength="80" placeholder="e.g. Grandparents" required /></label>
+      <label>Note (optional) <input type="text" name="note" maxlength="200" /></label>
+      <button type="submit" class="primary-button">Create group</button>
+    </form>
+  <% } %>
+  <% if (groups.length === 0) { %>
+    <p class="muted">No groups yet.</p>
+  <% } else { %>
+    <table class="data-table">
+      <thead><tr><th>Group</th><th>Note</th><th>Members</th><% if (can.manageMembers) { %><th>Actions</th><% } %></tr></thead>
+      <tbody>
+        <% groups.forEach(function (g) { %>
+          <tr>
+            <td><%= g.name %></td>
+            <td><%= g.note || '' %></td>
+            <td><%= g.memberCount %></td>
+            <% if (can.manageMembers) { %>
+              <td>
+                <form method="post" action="/admin/groups/<%= g.id %>/members" class="inline-generate">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <select name="userId" aria-label="Member">
+                    <% users.filter(function (u) { return !u.disabled; }).forEach(function (u) { %>
+                      <option value="<%= u.id %>"><%= u.displayName %></option>
+                    <% }); %>
+                  </select>
+                  <button type="submit" name="action" value="add" class="link-button">Add</button>
+                  <button type="submit" name="action" value="remove" class="link-button danger">Remove</button>
+                </form>
+                <form method="post" action="/admin/groups/<%= g.id %>/delete" class="inline-form"
+                  data-confirm="Delete this group? Members and photo shares referencing it are updated.">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                  <button type="submit" class="link-button danger">Delete group</button>
+                </form>
+              </td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<% if (can.manageMembers) { %>
+<section class="card">
+  <h2>Upload profiles</h2>
+  <p class="muted">
+    Permission presets you can apply to photos. Applying one that shares with
+    the whole family or allows downloads needs the other guardian.
+  </p>
+  <details class="profile-create">
+    <summary>Create an upload profile</summary>
+    <form method="post" action="/admin/profiles" class="stacked-form" data-audience-scope>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <label>Profile name <input type="text" name="name" maxlength="80" required /></label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="downloadable" data-download-toggle="#profile-watermark" />
+        <span>Allow downloads</span>
+      </label>
+      <div id="profile-watermark" class="indent">
+        <label class="checkbox-row"><input type="checkbox" name="watermarkOff" /> <span>Skip the visible mark (not recommended)</span></label>
+      </div>
+      <label class="checkbox-row"><input type="checkbox" name="commentsEnabled" checked /> <span>Allow comments</span></label>
+      <label class="checkbox-row"><input type="checkbox" name="reactionsEnabled" checked /> <span>Allow reactions</span></label>
+      <fieldset class="audience-fieldset">
+        <legend>Audience</legend>
+        <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.PARENTS %>" checked data-aud-radio /> <span>Parents only</span></label>
+        <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.GROUPS %>" data-aud-radio /> <span>Specific groups</span></label>
+        <div class="audience-list" data-aud-panel="<%= audiences.GROUPS %>">
+          <% rawGroups.forEach(function (g) { %>
+            <label class="checkbox-row"><input type="checkbox" name="audienceGroupIds" value="<%= g.id %>" /> <span><%= g.name %></span></label>
+          <% }); %>
+        </div>
+        <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.USERS %>" data-aud-radio /> <span>Specific people</span></label>
+        <div class="audience-list" data-aud-panel="<%= audiences.USERS %>">
+          <% users.filter(function (u) { return !u.disabled; }).forEach(function (u) { %>
+            <label class="checkbox-row"><input type="checkbox" name="audienceUserIds" value="<%= u.id %>" /> <span><%= u.displayName %></span></label>
+          <% }); %>
+        </div>
+        <label class="radio-row"><input type="radio" name="audienceType" value="<%= audiences.EVERYONE %>" data-aud-radio /> <span>Whole family</span></label>
+      </fieldset>
+      <button type="submit" class="primary-button">Create profile</button>
+    </form>
+  </details>
+  <% if (uploadProfiles.length === 0) { %>
+    <p class="muted">No upload profiles yet.</p>
+  <% } else { %>
+    <table class="data-table">
+      <thead><tr><th>Profile</th><th>Audience</th><th>Download</th><th>Mark</th><th></th></tr></thead>
+      <tbody>
+        <% uploadProfiles.forEach(function (p) { %>
+          <tr>
+            <td><%= p.name %></td>
+            <td>
+              <% if (p.audienceType === 'everyone') { %>Whole family
+              <% } else if (p.audienceType === 'users') { %>Specific people (<%= p.audienceUserIds.length %>)
+              <% } else if (p.audienceType === 'groups') { %>Groups (<%= p.audienceGroupIds.length %>)
+              <% } else { %>Parents only<% } %>
+            </td>
+            <td><%= p.downloadable ? 'Allowed' : 'Locked' %></td>
+            <td><%= p.watermark ? 'On' : 'Off' %></td>
+            <td>
+              <form method="post" action="/admin/profiles/<%= p.id %>/delete" class="inline-form"
+                data-confirm="Delete this profile? Photos set from it keep their current permissions.">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button type="submit" class="link-button danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<section class="card" id="reports">
+  <h2>Reported comments</h2>
+  <% if (reports.length === 0) { %>
+    <p class="muted">No open reports.</p>
+  <% } else { %>
+    <ul class="request-list">
+      <% reports.forEach(function (r) { %>
+        <li class="request">
+          <p><%= r.comment ? r.comment.body : '(comment no longer exists)' %></p>
+          <p class="muted">
+            By <%= r.comment ? r.comment.userDisplayName : 'unknown' %>.
+            <a href="/photos/<%= r.photoId %>#comments">Open photo</a>
+          </p>
+          <form method="post" action="/admin/reports/<%= r.id %>/resolve" class="inline-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <label class="checkbox-row"><input type="checkbox" name="removeComment" checked /> Remove the comment</label>
+            <button type="submit" class="btn-sm">Resolve</button>
+          </form>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</section>
+
+<section class="card danger-zone">
+  <h2>The archive</h2>
+  <p class="muted">
+    Export every photo (with location and camera details already removed)
+    plus captions, for safekeeping or to hand over to the child when they are
+    grown. Erasing the archive needs both guardians.
+  </p>
+  <form method="post" action="/admin/archive/export" class="inline-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <button type="submit" class="ghost-button">Export the full archive</button>
+  </form>
+  <form method="post" action="/admin/archive/erase" class="stacked-form"
+    data-confirm="Request permanent erasure of every photo? The other guardian must approve.">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>Type ERASE to request erasing everything <input type="text" name="confirm" autocomplete="off" /></label>
+    <button type="submit" class="btn-danger">Request archive erasure</button>
+  </form>
+</section>
+<% } %>
+
+<%- include('partials/footer') %>

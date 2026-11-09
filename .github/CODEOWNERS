@@ -1,0 +1,20 @@
+# Code owners are asked to review pull requests that touch these paths. With branch protection's
+# "Require review from Code Owners", these paths cannot merge without an owner's approval.
+# Before publishing: replace @OWNER with your GitHub username or team (git grep -n @OWNER).
+
+*                           @OWNER
+
+# Highest risk: who can see photos, and how they are stored
+/src/permissions.js         @OWNER
+/src/governance.js          @OWNER
+/src/media/                 @OWNER
+/src/security/              @OWNER
+/src/store/                 @OWNER
+/deploy/                    @OWNER
+/SECURITY.md                @OWNER
+
+# Supply chain
+/.github/                   @OWNER
+/package.json               @OWNER
+/package-lock.json          @OWNER
+/LICENSE                    @OWNER

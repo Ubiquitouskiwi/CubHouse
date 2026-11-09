@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security or privacy vulnerability
+    url: https://github.com/OWNER/REPO/security/advisories/new
+    about: Report it privately through GitHub. Do not open a public issue. See SECURITY.md.
+  - name: Deployment and operations help
+    url: https://github.com/OWNER/REPO/blob/main/docs/DEPLOY.md
+    about: The step-by-step deployment guide and the runbook answer most setup questions.

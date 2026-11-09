@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement.
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please start with the problem, not the solution: who is stuck, and why. Use made-up
+        details only.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      placeholder: A grandparent who signs in twice a week has to ...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: How would we know it works?
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fit with project principles
+      description: Check what you believe is true. Unchecked boxes are fine.
+      options:
+        - label: Adds no third-party requests, analytics, or tracking
+        - label: Keeps photos private by default
+        - label: Does not let one guardian widen exposure or destroy data alone

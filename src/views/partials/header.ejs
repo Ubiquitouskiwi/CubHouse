@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" data-theme-pref="<%= theme %>">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title><%= title %> | <%= siteName %></title>
+    <!--
+      Resolve the appearance preference before the stylesheet paints to avoid a
+      flash of the wrong theme. A stored 'light'/'dark' wins; 'system' follows
+      the OS setting via the media query. The resolved value lands on
+      data-theme, which the stylesheet keys off of.
+    -->
+    <script nonce="<%= cspNonce %>">
+      (function () {
+        var pref = document.documentElement.getAttribute('data-theme-pref');
+        var resolved =
+          pref === 'light' || pref === 'dark'
+            ? pref
+            : window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light';
+        document.documentElement.setAttribute('data-theme', resolved);
+      })();
+    </script>
+    <meta name="referrer" content="no-referrer" />
+    <link rel="stylesheet" href="/fonts/fonts.css?v=<%= assetVersion %>" />
+    <link rel="stylesheet" href="/styles.css?v=<%= assetVersion %>" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/home"><%= siteName %></a>
+      <nav class="site-nav">
+        <% if (currentUser) { %>
+          <a href="/home">Home</a>
+          <a href="/photos">Photos</a>
+          <a href="/albums">Albums</a>
+        <% } %>
+      </nav>
+      <div class="site-actions">
+        <% if (currentUser) { %>
+          <%
+            var displayName = currentUser.displayName || currentUser.email || 'Member';
+            var initial = displayName.trim().charAt(0).toUpperCase() || 'M';
+          %>
+          <div class="profile-menu" data-profile-menu>
+            <button
+              type="button"
+              class="profile-trigger"
+              data-profile-trigger
+              aria-haspopup="true"
+              aria-expanded="false"
+              aria-label="Open profile menu"
+            >
+              <span class="profile-avatar" aria-hidden="true"><%= initial %></span>
+            </button>
+            <div class="profile-dropdown" data-profile-dropdown role="menu" hidden>
+              <div class="profile-dropdown-header">
+                <span class="profile-dropdown-name"><%= displayName %></span>
+                <span class="profile-dropdown-role"><%= roleLabel || currentUser.role %></span>
+              </div>
+              <a class="profile-dropdown-item" href="/settings" role="menuitem">Settings</a>
+              <% if (can.viewAdminDashboard) { %>
+                <a class="profile-dropdown-item" href="/admin" role="menuitem">Admin</a>
+              <% } %>
+              <a class="profile-dropdown-item" href="/settings/security" role="menuitem">Security</a>
+              <form class="profile-dropdown-form" method="post" action="/logout">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                <button type="submit" class="profile-dropdown-item profile-dropdown-signout" role="menuitem">Sign out</button>
+              </form>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </header>
+    <main class="site-main">
+      <% if (typeof privacyNoticeOutdated !== 'undefined' && privacyNoticeOutdated) { %>
+        <div class="alert alert-info">
+          <p>The family privacy notice has been updated. <a href="/privacy">Please take a moment to read it.</a></p>
+        </div>
+      <% } %>
+      <% if (flash.error && flash.error.length) { %>
+        <div class="alert alert-error">
+          <% flash.error.forEach(function (msg) { %>
+            <p><%= msg %></p>
+          <% }); %>
+        </div>
+      <% } %>
+      <% if (flash.success && flash.success.length) { %>
+        <div class="alert alert-success">
+          <% flash.success.forEach(function (msg) { %>
+            <p><%= msg %></p>
+          <% }); %>
+        </div>
+      <% } %>

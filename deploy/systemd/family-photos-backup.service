@@ -1,0 +1,42 @@
+# Nightly encrypted backup (database + media). Started by family-photos-backup.timer.
+# Install all units in this folder:
+#   sudo cp deploy/systemd/*.service deploy/systemd/*.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now family-photos-backup.timer family-photos-backup-check.timer
+# Test the alert path once:  sudo systemctl start family-photos-alert@test.service
+
+[Unit]
+Description=Family photo site: encrypted nightly backup
+Wants=network-online.target
+After=network-online.target
+# Any failure emails ALERT_EMAIL (see family-photos-alert@.service).
+OnFailure=family-photos-alert@%n.service
+
+[Service]
+Type=oneshot
+User=family-photos-backup
+Group=family-photos-backup
+# The same env file as the app, so the backup can never run with a different
+# (or no) configuration. Backup-only keys (BACKUP_BUCKET, AGE_RECIPIENTS_FILE,
+# MEDIA_S3CMD_CONFIG, BACKUP_S3CMD_CONFIG) live here too.
+EnvironmentFile=/etc/family-photos/app.env
+WorkingDirectory=/opt/family-photos
+ExecStart=/opt/family-photos/deploy/backup.sh
+# Persistent mirror of the (encrypted) media, for incremental syncs.
+StateDirectory=family-photos-backup
+Environment=BACKUP_STATE_DIR=/var/lib/family-photos-backup
+TimeoutStartSec=3h
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+UMask=0077

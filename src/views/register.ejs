@@ -1,0 +1,65 @@
+<%- include('partials/header') %>
+
+<section class="card auth-card">
+  <h1>Create Account</h1>
+  <p class="muted">
+    You need an access code to register. The parents create these and share
+    them privately. Codes work once and expire after a few days.
+  </p>
+  <% if (typeof errors !== 'undefined' && errors.length) { %>
+    <div class="alert alert-error" role="alert">
+      <% errors.forEach(function (msg) { %>
+        <p><%= msg %></p>
+      <% }); %>
+    </div>
+  <% } %>
+  <form method="post" action="/register" class="stacked-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Access code
+      <input
+        type="text"
+        name="accessCode"
+        placeholder="INVITE-XXXX-XXXX-XXXX"
+        autocomplete="off"
+        value="<%= values.accessCode || '' %>"
+        required
+      />
+    </label>
+    <label>
+      Your name
+      <input type="text" name="displayName" maxlength="80" value="<%= values.displayName || '' %>" />
+    </label>
+    <label>
+      Email
+      <input type="email" name="email" autocomplete="email" value="<%= values.email || '' %>" required />
+    </label>
+    <label>
+      Password (at least 12 characters)
+      <input type="password" name="password" autocomplete="new-password" minlength="12" required />
+    </label>
+    <label>
+      Confirm password
+      <input type="password" name="confirm" autocomplete="new-password" minlength="12" required />
+    </label>
+
+    <div class="notice-box">
+      <h2 class="notice-title">Before you join</h2>
+      <ul>
+        <li>These are private photos of a child. Please do not share them outside the family.</li>
+        <li>When you download a photo, we record that you did, and the copy carries a hidden reference and usually a visible mark.</li>
+        <li>We keep your email, name, and sign-in records to run the site. Download records are deleted after 90 days.</li>
+        <li>You can download or delete your account data at any time from Settings.</li>
+      </ul>
+      <label class="checkbox-row">
+        <input type="checkbox" name="acknowledgePrivacy" required />
+        <span>I have read the <a href="/privacy" target="_blank" rel="noopener">privacy notice</a> and agree to keep these photos private.</span>
+      </label>
+    </div>
+
+    <button type="submit" class="primary-button">Create Account</button>
+  </form>
+  <p class="muted">Already have an account? <a href="/login">Sign in</a>.</p>
+</section>
+
+<%- include('partials/footer') %>

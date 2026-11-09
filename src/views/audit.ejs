@@ -1,0 +1,44 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Audit trail</h1>
+  <p class="muted">
+    Every sign-in and every important change is recorded here. Records are
+    chained together so any edit, removal, or reordering is detectable.
+    Details older than <%= retentionDays %> days are removed; the record that
+    an event happened stays.
+  </p>
+  <% if (chain.ok) { %>
+    <div class="alert alert-success"><p>Integrity check passed for all <%= chain.count %> records.</p></div>
+  <% } else { %>
+    <div class="alert alert-error"><p>Integrity check FAILED at record #<%= chain.brokenAt %>. The audit trail may have been tampered with.</p></div>
+  <% } %>
+  <p><a href="/admin">Back to Admin</a></p>
+</section>
+
+<section class="card">
+  <% if (events.length === 0) { %>
+    <p class="muted">No events yet.</p>
+  <% } else { %>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead>
+          <tr><th>#</th><th>When</th><th>Event</th><th>By</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+          <% events.forEach(function (e) { %>
+            <tr>
+              <td><%= e.seq %></td>
+              <td><%= e.at.replace('T', ' ').slice(0, 19) %></td>
+              <td><code><%= e.type %></code></td>
+              <td><%= e.actorName %></td>
+              <td class="muted"><%= e.redacted ? '(details removed by retention)' : JSON.stringify(e.details || {}) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</section>
+
+<%- include('partials/footer') %>

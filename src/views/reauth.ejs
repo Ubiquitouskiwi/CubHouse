@@ -1,0 +1,28 @@
+<%- include('partials/header') %>
+
+<section class="card auth-card">
+  <h1>Confirm it is you</h1>
+  <p class="muted">
+    This change affects who can see or keep the photos, so we ask you to
+    confirm your identity first. You will not be asked again for a few minutes.
+  </p>
+  <% if (error) { %>
+    <div class="alert alert-error" role="alert"><p><%= error %></p></div>
+  <% } %>
+  <form method="post" action="/reauth" class="stacked-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label>
+      Password
+      <input type="password" name="password" autocomplete="current-password" required autofocus />
+    </label>
+    <% if (needsCode) { %>
+      <label>
+        Authenticator code
+        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+      </label>
+    <% } %>
+    <button type="submit" class="primary-button">Confirm</button>
+  </form>
+</section>
+
+<%- include('partials/footer') %>

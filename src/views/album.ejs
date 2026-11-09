@@ -1,0 +1,66 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <p><a href="/albums">&larr; Back to albums</a></p>
+  <h1><%= album.name %></h1>
+  <p class="muted"><%= photos.length %> <%= photos.length === 1 ? 'photo' : 'photos' %> in this album.</p>
+  <form method="post" action="/albums/<%= album.id %>/delete" class="danger-form"
+    data-confirm="Delete this album? The photos themselves are not deleted.">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <button type="submit" class="link-button danger">Delete album</button>
+  </form>
+</section>
+
+<section class="gallery">
+  <% if (photos.length === 0) { %>
+    <div class="empty-state">
+      <p>This album is empty.</p>
+      <p class="muted">Open a photo from the Photos page and add it to this album.</p>
+    </div>
+  <% } else { %>
+    <div class="photo-grid">
+      <% photos.forEach(function (photo) { var cap = capFor(photo); %>
+        <figure class="photo photo-card">
+          <button
+            type="button"
+            class="photo-open"
+            data-photo-open
+            data-src="/media/<%= photo.id %>/display"
+            data-caption="<%= photo.caption || '' %>"
+            data-href="/photos/<%= photo.id %>"
+            aria-label="Open <%= photo.caption || 'photo' %>"
+          >
+            <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Family photo' %>" loading="lazy" />
+          </button>
+          <figcaption class="photo-caption">
+            <span class="photo-caption-text"><%= photo.caption || 'Untitled' %></span>
+          </figcaption>
+          <div class="photo-actions">
+            <a class="link-button" href="/photos/<%= photo.id %>">Open</a>
+            <% if (cap.download) { %>
+              <a class="link-button" href="/photos/<%= photo.id %>/download">Download</a>
+            <% } %>
+            <form method="post" action="/albums/<%= album.id %>/remove" class="inline-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input type="hidden" name="photoId" value="<%= photo.id %>" />
+              <button type="submit" class="link-button danger">Remove</button>
+            </form>
+          </div>
+        </figure>
+      <% }); %>
+    </div>
+  <% } %>
+</section>
+
+<div class="lightbox" data-lightbox hidden>
+  <button type="button" class="lightbox-close" data-lightbox-close aria-label="Close">&times;</button>
+  <figure class="lightbox-figure">
+    <img class="lightbox-image" data-lightbox-image src="" alt="" />
+    <figcaption class="lightbox-caption" data-lightbox-caption></figcaption>
+  </figure>
+  <a class="lightbox-open-page" data-lightbox-page href="#">Open full details</a>
+</div>
+
+<script src="/lightbox.js"></script>
+
+<%- include('partials/footer') %>
