@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 
 const { logger, errorFields } = require('../logger');
+const { snapshotUsage } = require('../usage');
 
 /**
  * Daily data-minimization job.
@@ -13,12 +14,14 @@ const { logger, errorFields } = require('../logger');
  *   - Governance requests whose delay passed are executed or expired.
  *   - Guardians get a digest of the last day's downloads (counts only),
  *     at most once per UTC day however many instances are running.
+ *   - Usage page: snapshot how many family accounts signed in recently, and
+ *     delete usage rollups older than USAGE_RETENTION_DAYS (400).
  */
 
 const DAY = 24 * 60 * 60 * 1000;
 
 async function runRetention({ store, config, governance, notifier, now = Date.now() }) {
-  const result = { downloadsPurged: 0, auditRedacted: 0, governanceExecuted: 0, digestSent: false };
+  const result = { downloadsPurged: 0, auditRedacted: 0, governanceExecuted: 0, digestSent: false, usagePurged: 0 };
 
   const downloadCutoff = new Date(now - config.privacy.downloadRetentionDays * DAY).toISOString();
   result.downloadsPurged = await store.purgeDownloadsBefore(downloadCutoff);
@@ -28,6 +31,14 @@ async function runRetention({ store, config, governance, notifier, now = Date.no
 
   if (governance) {
     result.governanceExecuted = await governance.runDue(now);
+  }
+
+  // Usage metrics are a nice-to-have: a failure here must not stop the
+  // privacy work above or the digest below.
+  try {
+    result.usagePurged = (await snapshotUsage({ store, config, now })).purged;
+  } catch (err) {
+    logger.warn(errorFields(err), 'usage snapshot failed');
   }
 
   // Everything above is idempotent, so two instances (a deploy swap) or a

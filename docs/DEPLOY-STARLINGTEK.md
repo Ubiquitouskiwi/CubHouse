@@ -70,6 +70,7 @@ StarlingTek's "Adding a project".
    ```bash
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/001_security.sql
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/002_data_store.sql
+   psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/003_usage_metrics.sql
    psql "$MIGRATION_DATABASE_URL" -c "ALTER ROLE photos_app PASSWORD '<long random>'"
    ```
 

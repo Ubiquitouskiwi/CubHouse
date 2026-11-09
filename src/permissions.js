@@ -78,6 +78,8 @@ function portalCapabilities(role) {
     manageSiteSettings: isParent || isDev,
     // The Support page (account unlock and resets) is operator-only.
     useSupportConsole: r === ROLES.OPERATOR,
+    // Aggregate site usage (Usage page) is guardian-only; dev does not get it.
+    viewUsageMetrics: isParent,
   });
 }
 

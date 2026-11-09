@@ -1,0 +1,130 @@
+<%- include('partials/header') %>
+
+<section class="card">
+  <h1>Usage</h1>
+  <p class="usage-summary"><strong><%= report.summary %></strong></p>
+  <p class="muted">
+    Counts and trends only, to help decide whether the site is worth keeping.
+    Nothing here says who did what. Any count of 1 or 2 is hidden, because
+    with a few families a number that small could point at one household.
+    Totals are kept for <%= retentionDays %> days (about 13 months).
+    <% if (report.collectingSince) { %>Counting started <%= report.collectingSince %>.<% } else { %>Nothing has been counted yet.<% } %>
+  </p>
+  <p><a href="/admin">Back to Admin</a></p>
+</section>
+
+<section class="card" aria-labelledby="usage-active">
+  <h2 id="usage-active">Family accounts signed in</h2>
+  <ul class="stat-list">
+    <li><strong><%= report.total %></strong> family accounts</li>
+    <% report.active.forEach(function (a) { %>
+      <li><strong><%= a.count.text %></strong> <%= a.label.charAt(0).toLowerCase() + a.label.slice(1) %></li>
+    <% }); %>
+  </ul>
+  <% if (report.roleSplitShown) { %>
+    <div class="table-scroll">
+      <table class="data-table">
+        <caption class="sr-only">Accounts signed in, by role</caption>
+        <thead>
+          <tr><th scope="col">Role</th><th scope="col">Accounts</th><th scope="col">Last 7 days</th><th scope="col">Last 30 days</th></tr>
+        </thead>
+        <tbody>
+          <% report.roleRows.forEach(function (r) { %>
+            <tr><th scope="row"><%= r.label %></th><td><%= r.total.text %></td><td><%= r.active7.text %></td><td><%= r.active30.text %></td></tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } else { %>
+    <p class="muted">Not split into guardians and family members: with so few guardian accounts, a split would reveal counts under 3.</p>
+  <% } %>
+  <p class="muted">The support account is never counted. Removed accounts are not counted.</p>
+</section>
+
+<section class="card" aria-labelledby="usage-accounts">
+  <h2 id="usage-accounts">Accounts</h2>
+  <div class="table-scroll">
+    <table class="data-table">
+      <caption class="sr-only">Accounts created and signed in</caption>
+      <tbody>
+        <tr><th scope="row">Family accounts</th><td><%= report.total %></td></tr>
+        <tr><th scope="row">Signed in at least once</th><td><%= report.everSignedIn.text %></td></tr>
+        <tr><th scope="row">Never signed in after creating the account</th><td><%= report.neverSignedIn.text %></td></tr>
+        <% report.windows.forEach(function (w) { %>
+          <tr><th scope="row">Created in the last <%= w.days %> days</th><td><%= w.created.text %></td></tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">When one of the first two rows is under 3, both are hidden, since the other would give it away.</p>
+</section>
+
+<section class="card" aria-labelledby="usage-windows">
+  <h2 id="usage-windows">Sign-ins and site sections</h2>
+  <div class="table-scroll">
+    <table class="data-table">
+      <caption class="sr-only">Sign-ins and visits to each part of the site, over the last 30, 90 and 365 days</caption>
+      <thead>
+        <tr>
+          <th scope="col">What</th>
+          <% report.windows.forEach(function (w) { %><th scope="col">Last <%= w.days %> days</th><% }); %>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Sign-ins</th>
+          <% report.windows.forEach(function (w) { %><td><%= w.logins.text %></td><% }); %>
+        </tr>
+        <% report.sections.forEach(function (s) { %>
+          <tr>
+            <th scope="row"><%= s.label %></th>
+            <% s.counts.forEach(function (c) { %><td><%= c.text %></td><% }); %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">Section numbers count pages opened and actions taken, not people.</p>
+</section>
+
+<section class="card" aria-labelledby="usage-trend">
+  <h2 id="usage-trend">Trend</h2>
+  <nav class="usage-ranges" aria-label="Trend period">
+    <% report.ranges.forEach(function (r) { %>
+      <a class="usage-range" href="/admin/usage?range=<%= r %>"<% if (r === report.range) { %> aria-current="page"<% } %>>Last <%= r %> days</a>
+    <% }); %>
+  </nav>
+  <div class="table-scroll">
+    <table class="data-table usage-trend">
+      <caption class="sr-only">Sign-ins and accounts signed in, by <%= report.granularity %>, over the last <%= report.range %> days</caption>
+      <thead>
+        <tr>
+          <th scope="col"><%= report.granularity === 'day' ? 'Day' : report.granularity === 'week' ? 'Week' : 'Month' %></th>
+          <th scope="col">Sign-ins</th>
+          <th scope="col">Accounts signed in that <%= report.granularity %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% report.buckets.forEach(function (b) { %>
+          <tr>
+            <th scope="row"><%= b.label %></th>
+            <td>
+              <span class="usage-bar">
+                <% if (!b.logins.suppressed) { %><meter min="0" max="<%= report.maxLogins %>" value="<%= b.logins.value %>" aria-hidden="true"></meter><% } %>
+                <span><%= b.logins.text %></span>
+              </span>
+            </td>
+            <td><%= b.active.text %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">
+    "Accounts signed in" comes from a once-a-day count of accounts that signed
+    in during the previous <%= report.granularity === 'day' ? 'day' : report.granularity === 'week' ? '7 days' : '30 days' %>,
+    taken nearest the end of each period. Days are UTC.
+  </p>
+</section>
+
+<%- include('partials/footer') %>

@@ -32,6 +32,7 @@ const PG_TABLES = [
   'app_auth_failures',
   'app_sessions',
   'app_rate_limits',
+  'app_usage_daily',
   'security_audit_events',
 ];
 

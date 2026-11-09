@@ -21,7 +21,7 @@ const GENERIC_RESET_ERROR =
 const MFA_PENDING_TTL_MS = 5 * 60 * 1000;
 
 module.exports = function authRoutes(ctx) {
-  const { store, config, notifier, limiters } = ctx;
+  const { store, config, notifier, limiters, usage } = ctx;
   const router = createRouter();
   const kek = deriveKey(config.encryptionKey);
 
@@ -75,6 +75,10 @@ module.exports = function authRoutes(ctx) {
       ...(notices.length ? { supportNotices: [] } : {}),
     });
     await audit(store, req, 'auth.login', { targetType: 'user', targetId: user.id });
+    // Aggregate sign-in count for the Usage page (buffered, cannot throw).
+    if (usage && user.role !== 'operator') {
+      usage.count('logins');
+    }
     establishSession(req, user, (err) => {
       if (err) {
         return next(err);

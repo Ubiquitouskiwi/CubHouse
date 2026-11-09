@@ -1082,6 +1082,49 @@ class PgStore {
     const { rows } = await this.pool.query('SELECT redact_audit_details_before($1) AS n', [before]);
     return Number(rows[0].n);
   }
+
+  // --- Usage rollups (aggregate counts per UTC day; see src/usage.js) ---
+
+  // One statement for the whole batch, so a flush is a single round trip.
+  async addUsageCounts(day, counts) {
+    const entries = Object.entries(counts);
+    if (entries.length === 0) {
+      return;
+    }
+    await this.pool.query(
+      `INSERT INTO app_usage_daily (day, metric, value)
+       SELECT $1::date, m, v FROM unnest($2::text[], $3::int[]) AS t(m, v)
+       ON CONFLICT (day, metric) DO UPDATE SET value = app_usage_daily.value + EXCLUDED.value`,
+      [day, entries.map((e) => e[0]), entries.map((e) => e[1])]
+    );
+  }
+
+  async setUsageValues(day, values) {
+    const entries = Object.entries(values);
+    if (entries.length === 0) {
+      return;
+    }
+    await this.pool.query(
+      `INSERT INTO app_usage_daily (day, metric, value)
+       SELECT $1::date, m, v FROM unnest($2::text[], $3::int[]) AS t(m, v)
+       ON CONFLICT (day, metric) DO UPDATE SET value = EXCLUDED.value`,
+      [day, entries.map((e) => e[0]), entries.map((e) => e[1])]
+    );
+  }
+
+  async listUsageSince(sinceDay) {
+    const { rows } = await this.pool.query(
+      `SELECT to_char(day, 'YYYY-MM-DD') AS day, metric, value FROM app_usage_daily
+       WHERE day >= $1::date ORDER BY day, metric`,
+      [sinceDay]
+    );
+    return rows.map((r) => ({ day: r.day, metric: r.metric, value: Number(r.value) }));
+  }
+
+  async purgeUsageBefore(beforeDay) {
+    const { rowCount } = await this.pool.query('DELETE FROM app_usage_daily WHERE day < $1::date', [beforeDay]);
+    return rowCount;
+  }
 }
 
 module.exports = { PgStore };

@@ -85,6 +85,19 @@ function requireOperator(req, res, next) {
   return res.status(403).render('error', { title: 'Not allowed', message: 'You do not have access to that page.' });
 }
 
+// Guardian-only page that answers with a status instead of a redirect:
+// 404 when signed out (the page's existence is not advertised), 403 for any
+// signed-in account that is not a guardian (family member, dev, operator).
+function requireParentPage(req, res, next) {
+  if (!req.user) {
+    return res.status(404).render('error', { title: 'Not Found', message: 'That page could not be found.' });
+  }
+  if (req.user.role === ROLES.PARENT) {
+    return next();
+  }
+  return res.status(403).render('error', { title: 'Not allowed', message: 'You do not have access to that page.' });
+}
+
 function redirectIfAuthed(req, res, next) {
   if (req.session && req.session.userId) {
     return res.redirect('/home');
@@ -101,5 +114,6 @@ module.exports = {
   requireParent,
   requireDevOrParent,
   requireOperator,
+  requireParentPage,
   redirectIfAuthed,
 };
