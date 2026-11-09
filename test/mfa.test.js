@@ -15,12 +15,17 @@ test('TOTP matches the RFC 6238 SHA-1 test vector', () => {
   assert.equal(totp.verify(secret, 'abc', { timeMs: 59 * 1000 }), -1);
 });
 
+// Returns the secret plus the exact code and time used to enroll, so callers can
+// replay that same code. Regenerating a code later is racy: if a 30-second step
+// boundary passes in between, the "replay" is really a fresh, valid code.
 async function enroll(c) {
   const page = await c.get('/settings/security');
   const secret = /class="setup-key"><code>([A-Z2-7 ]+)<\/code>/.exec(page.body)[1].replace(/ /g, '');
-  const res = await c.post('/settings/security/mfa/enable', { code: totp.generate(secret) });
+  const enrolledAt = Date.now();
+  const code = totp.generate(secret, enrolledAt);
+  const res = await c.post('/settings/security/mfa/enable', { code });
   assert.equal(res.location, '/settings/security');
-  return secret;
+  return { secret, code, enrolledAt };
 }
 
 test('enrolling MFA, then signing in requires a valid, non-replayed code', async (t) => {
@@ -29,7 +34,7 @@ test('enrolling MFA, then signing in requires a valid, non-replayed code', async
   const { member } = await seedFamily(env);
   const c = env.client();
   await c.login(member.email);
-  const secret = await enroll(c);
+  const { secret, code: enrollCode, enrolledAt } = await enroll(c);
   const stored = await env.store.findUserById(member.id);
   assert.equal(stored.mfaEnabled, true);
   // Secret is encrypted at rest, never stored in the clear.
@@ -42,10 +47,11 @@ test('enrolling MFA, then signing in requires a valid, non-replayed code', async
   const bad = await d.post('/login/mfa', { code: '000000' });
   assert.equal(bad.status, 401);
 
-  // The code used at enrollment cannot be replayed within the same step.
-  const replay = await d.post('/login/mfa', { code: totp.generate(secret) });
+  // The exact code used at enrollment cannot be replayed.
+  const replay = await d.post('/login/mfa', { code: enrollCode });
   assert.equal(replay.status, 401);
-  const next = await d.post('/login/mfa', { code: totp.generate(secret, Date.now() + 30 * 1000) });
+  // The next step after enrollment is accepted (still inside the +/-1 drift window).
+  const next = await d.post('/login/mfa', { code: totp.generate(secret, enrolledAt + 30 * 1000) });
   assert.equal(next.location, '/home');
   assert.equal((await d.get('/home')).status, 200);
 });
