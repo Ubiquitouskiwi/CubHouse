@@ -132,9 +132,11 @@ const config = {
 
   privacy: {
     // Bump when the privacy notice changes materially; members re-acknowledge.
-    noticeVersion: env.PRIVACY_NOTICE_VERSION || '2026-11-03',
+    noticeVersion: env.PRIVACY_NOTICE_VERSION || '2026-11-09',
     downloadRetentionDays: num(env.DOWNLOAD_RETENTION_DAYS, 90),
     auditDetailRetentionDays: num(env.AUDIT_DETAIL_RETENTION_DAYS, 365),
+    // Aggregate daily usage counts (Usage page): about 13 months.
+    usageRetentionDays: num(env.USAGE_RETENTION_DAYS, 400),
     ledgerStoresUserAgent: bool(env.LEDGER_STORE_USER_AGENT, false),
   },
 

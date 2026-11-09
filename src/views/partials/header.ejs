@@ -69,6 +69,9 @@
               <% if (can.viewAdminDashboard) { %>
                 <a class="profile-dropdown-item" href="/admin">Admin</a>
               <% } %>
+              <% if (can.viewUsageMetrics) { %>
+                <a class="profile-dropdown-item" href="/admin/usage">Usage</a>
+              <% } %>
               <a class="profile-dropdown-item" href="/settings/security">Security</a>
               <form class="profile-dropdown-form" method="post" action="/logout">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

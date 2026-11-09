@@ -22,6 +22,7 @@ const { createGovernance } = require('./governance');
 const { createActions } = require('./services/actions');
 const { scheduleRetention } = require('./jobs/retention');
 const { BadInput } = require('./validation');
+const { createUsageRecorder, createUsageMiddleware } = require('./usage');
 
 const authRoutes = require('./routes/auth');
 const pageRoutes = require('./routes/pages');
@@ -30,6 +31,7 @@ const adminRoutes = require('./routes/admin');
 const photoRoutes = require('./routes/photos');
 const albumRoutes = require('./routes/albums');
 const supportRoutes = require('./routes/support');
+const usageRoutes = require('./routes/usage');
 
 // Stylesheet cache-busting token, computed once at boot (not per request).
 const ASSET_VERSION = (() => {
@@ -89,8 +91,10 @@ async function buildApp(store, options = {}) {
   }
 
   const csrf = createCsrf();
+  // Aggregate usage counters for the guardian Usage page (src/usage.js).
+  const usage = options.usage || createUsageRecorder({ store });
   const requireStepUp = createRequireStepUp({ config });
-  const ctx = { store, config, media, notifier, governance, actions, limiters, requireStepUp };
+  const ctx = { store, config, media, notifier, governance, actions, limiters, requireStepUp, usage };
   app.locals.services = ctx;
 
   // --- Middleware, in order ---
@@ -157,11 +161,14 @@ async function buildApp(store, options = {}) {
   app.use(noStore);
   // The support operator reaches only the Support page and its own settings.
   app.use(operatorScope);
+  // Counts a finished request into its named section; never blocks or fails it.
+  app.use(createUsageMiddleware(usage));
 
   app.use('/', authRoutes(ctx));
   app.use('/', supportRoutes(ctx));
   app.use('/', pageRoutes(ctx));
   app.use('/', accountRoutes(ctx));
+  app.use('/', usageRoutes(ctx));
   app.use('/', adminRoutes(ctx));
   app.use('/', photoRoutes(ctx));
   app.use('/', albumRoutes(ctx));
@@ -317,7 +324,7 @@ async function main() {
   await seedAccounts(store);
 
   const app = await buildApp(store);
-  const { media, governance, notifier } = app.locals.services;
+  const { media, governance, notifier, usage } = app.locals.services;
   await seedSampleContent(store, media);
   scheduleRetention({ store, config, governance, notifier });
 
@@ -345,7 +352,8 @@ async function main() {
   // container Node is PID 1, which ignores SIGTERM unless it is handled.
   const shutdown = (signal) => {
     logger.info({ signal }, 'shutting down');
-    server.close(() => process.exit(0));
+    // Write the last minute of buffered usage counts (flush never rejects).
+    server.close(() => usage.flush().then(() => process.exit(0)));
     setTimeout(() => process.exit(0), 10 * 1000).unref();
   };
   process.once('SIGTERM', shutdown);

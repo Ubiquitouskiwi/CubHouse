@@ -11,6 +11,7 @@
     <p>
       <a class="link-button" href="/admin/audit">Audit trail</a>
       <a class="link-button" href="/photos/downloads">Download history</a>
+      <% if (can.viewUsageMetrics) { %><a class="link-button" href="/admin/usage">Usage</a><% } %>
     </p>
   <% } else { %>
     <p class="muted">Read-only view for development. Member emails and invite codes are visible to guardians only.</p>

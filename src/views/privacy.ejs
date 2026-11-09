@@ -8,8 +8,8 @@
   <p>
     <%= siteName %> is a private photo site run by the child's parents (the
     "guardians") to share photos with invited family. The guardians decide
-    what is shared and with whom. There are no ads, no analytics, no
-    third-party trackers, and nothing is ever sold or shared with anyone else.
+    what is shared and with whom. There are no ads, no third-party analytics
+    or trackers, and nothing is ever sold or shared with anyone else.
   </p>
 
   <h2>The child</h2>
@@ -27,6 +27,7 @@
     <li><strong>What you add:</strong> comments, reactions, personal albums, and photos you send in.</li>
     <li><strong>Downloads:</strong> which photo you downloaded, when, and the first part of your network address. These records are deleted after <%= downloadRetentionDays %> days.</li>
     <li><strong>Security records:</strong> sign-ins and important changes, so the guardians can see if something goes wrong. Details are removed after <%= auditRetentionDays %> days.</li>
+    <li><strong>Usage counts:</strong> daily totals, such as how many sign-ins there were and how often each part of the site was used, so the guardians can decide whether the site is worth keeping. These totals do not say who did what, and small counts are hidden. They are deleted after about 13 months.</li>
   </ul>
 
   <h2>Downloads are traced</h2>

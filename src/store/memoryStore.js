@@ -92,6 +92,8 @@ class MemoryStore {
     this.authFailureStates = new Map();
     this.resetCodes = new Map();
     this.securityAuditEvents = [];
+    // Usage rollups: `${day}|${metric}` -> count. Aggregates only.
+    this.usageDaily = new Map();
     this.ready = Promise.resolve();
   }
 
@@ -1050,6 +1052,46 @@ class MemoryStore {
       }
     }
     return redacted;
+  }
+
+  // --- Usage rollups (aggregate counts per UTC day; see src/usage.js) ---
+
+  /** Add to counters: `counts` is { metric: n }. */
+  async addUsageCounts(day, counts) {
+    for (const [metric, n] of Object.entries(counts)) {
+      const key = `${day}|${metric}`;
+      this.usageDaily.set(key, (this.usageDaily.get(key) || 0) + n);
+    }
+  }
+
+  /** Overwrite snapshot values: `values` is { metric: n }. */
+  async setUsageValues(day, values) {
+    for (const [metric, n] of Object.entries(values)) {
+      this.usageDaily.set(`${day}|${metric}`, n);
+    }
+  }
+
+  /** Every row on or after `sinceDay` (YYYY-MM-DD), oldest first. */
+  async listUsageSince(sinceDay) {
+    const rows = [];
+    for (const [key, value] of this.usageDaily) {
+      const [day, metric] = key.split('|');
+      if (day >= sinceDay) {
+        rows.push({ day, metric, value });
+      }
+    }
+    return rows.sort((a, b) => a.day.localeCompare(b.day) || a.metric.localeCompare(b.metric));
+  }
+
+  async purgeUsageBefore(beforeDay) {
+    let removed = 0;
+    for (const key of [...this.usageDaily.keys()]) {
+      if (key.split('|')[0] < beforeDay) {
+        this.usageDaily.delete(key);
+        removed += 1;
+      }
+    }
+    return removed;
   }
 }
 
