@@ -228,5 +228,10 @@ choice to make; ask them if you are curious.
 
 ## Phones
 
-Everything works on a phone. On some narrow phones the round menu button at the top right is
-pushed off the screen. See [Troubleshooting](troubleshooting.md#on-my-phone-i-cannot-reach-the-menu).
+Everything works on a phone. The round menu button stays at the top right, and **Home**,
+**Photos** and **Albums** move to their own row below the site name. Tap the round button for
+**Settings**, **Security** and **Sign out**.
+
+![Cubhouse on a phone with the menu open, showing Grandma Jo's name and the Settings, Security and Sign out links](img/mobile-profile-menu.png)
+
+If you cannot reach the menu, see [Troubleshooting](troubleshooting.md#on-my-phone-i-cannot-reach-the-menu).

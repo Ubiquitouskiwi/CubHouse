@@ -55,6 +55,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- On phones the header now wraps, so the account menu button is no longer off screen under the
+  nav and Settings, Security and Sign out can be reached. The menu is a plain disclosure button
+  (`aria-expanded`, `aria-controls`): opening it from the keyboard moves focus to the first link,
+  and Escape or tabbing away closes it.
+
 - The daily download digest is sent once per UTC day. Before, every boot sent one a minute after
   starting, and two instances running side by side during a deploy swap each sent their own.
 
