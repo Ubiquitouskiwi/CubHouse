@@ -45,29 +45,32 @@
             var initial = displayName.trim().charAt(0).toUpperCase() || 'M';
           %>
           <div class="profile-menu" data-profile-menu>
+            <%# A disclosure button, not an ARIA menu: the panel holds ordinary
+                links and a form, reached with Tab, so no menu roles that would
+                promise arrow-key navigation. %>
             <button
               type="button"
               class="profile-trigger"
               data-profile-trigger
-              aria-haspopup="true"
               aria-expanded="false"
-              aria-label="Open profile menu"
+              aria-controls="profile-dropdown"
+              aria-label="Account menu for <%= displayName %>"
             >
               <span class="profile-avatar" aria-hidden="true"><%= initial %></span>
             </button>
-            <div class="profile-dropdown" data-profile-dropdown role="menu" hidden>
+            <div class="profile-dropdown" id="profile-dropdown" data-profile-dropdown hidden>
               <div class="profile-dropdown-header">
                 <span class="profile-dropdown-name"><%= displayName %></span>
                 <span class="profile-dropdown-role"><%= roleLabel || currentUser.role %></span>
               </div>
-              <a class="profile-dropdown-item" href="/settings" role="menuitem">Settings</a>
+              <a class="profile-dropdown-item" href="/settings">Settings</a>
               <% if (can.viewAdminDashboard) { %>
-                <a class="profile-dropdown-item" href="/admin" role="menuitem">Admin</a>
+                <a class="profile-dropdown-item" href="/admin">Admin</a>
               <% } %>
-              <a class="profile-dropdown-item" href="/settings/security" role="menuitem">Security</a>
+              <a class="profile-dropdown-item" href="/settings/security">Security</a>
               <form class="profile-dropdown-form" method="post" action="/logout">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                <button type="submit" class="profile-dropdown-item profile-dropdown-signout" role="menuitem">Sign out</button>
+                <button type="submit" class="profile-dropdown-item profile-dropdown-signout">Sign out</button>
               </form>
             </div>
           </div>

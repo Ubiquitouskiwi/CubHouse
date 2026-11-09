@@ -248,6 +248,39 @@ a {
   flex: 1;
 }
 
+/* Phones: the brand, nav and account button do not fit on one row (the page
+   became wider than the screen and the account button sat off its right edge).
+   Put the brand and account button on the first row and the nav on its own
+   row below, so everything stays on screen in tab order. */
+@media (max-width: 600px) {
+  .site-header {
+    flex-wrap: wrap;
+    row-gap: 0.7rem;
+    padding: 0.8rem 1rem 2.3rem;
+  }
+
+  .brand {
+    font-size: 1.2rem;
+  }
+
+  /* `order` below also moves the nav later in painting order, so lift the
+     account menu above it or its panel opens underneath the nav pills. */
+  .site-actions {
+    flex: 0 0 auto;
+    z-index: 2;
+  }
+
+  .site-nav {
+    order: 1;
+    flex: 1 0 100%;
+    gap: 0.5rem;
+  }
+
+  .site-nav a {
+    padding: 0.35rem 0.8rem;
+  }
+}
+
 .profile-menu {
   position: relative;
 }

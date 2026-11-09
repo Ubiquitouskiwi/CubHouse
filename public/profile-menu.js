@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  // Account menu: a disclosure button (aria-expanded) that shows a panel of
+  // links. Click, tap, Enter or Space toggles it. Opening from the keyboard
+  // moves focus to the first link; Escape closes it and returns focus to the
+  // button; tabbing or clicking outside closes it.
+
   var menu = document.querySelector('[data-profile-menu]');
   if (!menu) {
     return;
@@ -12,9 +17,15 @@
     return;
   }
 
-  function open() {
+  function open(focusFirst) {
     dropdown.hidden = false;
     trigger.setAttribute('aria-expanded', 'true');
+    if (focusFirst) {
+      var first = dropdown.querySelector('a, button');
+      if (first) {
+        first.focus();
+      }
+    }
   }
 
   function close() {
@@ -31,12 +42,20 @@
     if (isOpen()) {
       close();
     } else {
-      open();
+      // detail is 0 when the click came from Enter or Space, not a pointer.
+      open(event.detail === 0);
     }
   });
 
   document.addEventListener('click', function (event) {
     if (isOpen() && !menu.contains(event.target)) {
+      close();
+    }
+  });
+
+  // Focus leaving the menu (Tab past the last link, or Shift+Tab out) closes it.
+  menu.addEventListener('focusout', function (event) {
+    if (isOpen() && event.relatedTarget && !menu.contains(event.relatedTarget)) {
       close();
     }
   });

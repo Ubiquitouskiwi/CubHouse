@@ -84,10 +84,13 @@ Type it exactly as given, with the email the guardian expected. Otherwise ask fo
 
 ## On my phone I cannot reach the menu
 
-On narrow phones, the row of buttons at the top can push the round menu button (with your initial)
-off the right edge of the screen, and the **Albums** button sits on top of it.
+On a phone, the round menu button with your initial sits at the top right, next to the site name.
+**Home**, **Photos** and **Albums** are on a row of their own just below.
 
-You can still get everywhere:
+![Cubhouse on a phone with the menu open under the round button at the top right, showing Settings, Security and Sign out](img/mobile-profile-menu.png)
+
+If the menu button is off the edge of the screen, or the **Albums** button covers it, the site is
+running an older version. Ask whoever runs the server to update Cubhouse. Until then:
 
 - Turn your phone sideways. The menu button fits.
 - Or type the address directly: `/settings` for Settings, `/settings/security` for Security, and
