@@ -29,8 +29,8 @@ jobs:
     name: Publish the user guide to the wiki
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      WIKI_DIR: ${{ runner.temp }}/wiki
+    # Note: the `runner` context is not available in job-level `env`, so the wiki
+    # path is derived from $RUNNER_TEMP inside each step instead.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -45,6 +45,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          WIKI_DIR="$RUNNER_TEMP/wiki"
           helper='!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f'
           if ! git -c credential.helper= -c credential.helper="$helper" \
               clone --quiet "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$WIKI_DIR" 2> clone.err; then
@@ -59,15 +60,15 @@ jobs:
           git -C "$WIKI_DIR" config credential.helper "$helper"
 
       - name: Build the wiki pages from docs/guide
-        run: node scripts/wiki-sync.js --guide docs/guide --out "$WIKI_DIR" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
+        run: node scripts/wiki-sync.js --guide docs/guide --out "$RUNNER_TEMP/wiki" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
 
       - name: Commit and push only if something changed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Same secret and check as ci.yml, over the generated pages.
           FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
-        working-directory: ${{ runner.temp }}/wiki
         run: |
+          cd "$RUNNER_TEMP/wiki"
           git add -A
           if git diff --cached --quiet; then
             echo 'Wiki already up to date'
