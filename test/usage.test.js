@@ -142,9 +142,11 @@ test('recording: operator, anonymous, prefetch and bot traffic do not count', as
 
 test('recording never breaks a request: store errors are swallowed and logged', async (t) => {
   const { env } = await setup(t);
-  env.store.addUsageCounts = async () => {
+  // t.mock restores the method after this test. Under test:pg every test in a
+  // file shares one PgStore, so a plain assignment leaked into later tests.
+  t.mock.method(env.store, 'addUsageCounts', async () => {
     throw new Error('database is down');
-  };
+  });
   const m = env.client();
   await m.login('member@test.com');
   const res = await m.get('/photos');
@@ -296,9 +298,9 @@ test('daily snapshot counts recent sign-ins; rollups past ~13 months are deleted
 
 test('a usage snapshot failure does not stop the retention job', async (t) => {
   const { env } = await setup(t);
-  env.store.setUsageValues = async () => {
+  t.mock.method(env.store, 'setUsageValues', async () => {
     throw new Error('table missing');
-  };
+  });
   const result = await runRetention({ store: env.store, config, now: Date.now() });
   assert.equal(result.usagePurged, 0);
 });
