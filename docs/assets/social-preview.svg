@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-labelledby="title desc">
+  <title id="title">Cubhouse</title>
+  <desc id="desc">Cubhouse social preview: the bear cub den logo beside the name Cubhouse and the tagline "Private family photo sharing you can host yourself."</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f2e6"/>
+      <stop offset="1" stop-color="#ece3cf"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Soft forest hills along the bottom -->
+  <path d="M0 560 Q200 500 420 548 T860 536 T1280 520 V640 H0 Z" fill="#2f6b4f" opacity="0.14"/>
+  <path d="M0 600 Q260 556 560 590 T1280 572 V640 H0 Z" fill="#234e3a" opacity="0.18"/>
+
+  <!-- Background pines (right side) -->
+  <g fill="#2f6b4f" opacity="0.12">
+    <path d="M1130 300 L1180 400 H1080 Z"/>
+    <path d="M1130 350 L1194 470 H1066 Z"/>
+    <path d="M1210 360 L1248 440 H1172 Z"/>
+    <path d="M1210 400 L1258 500 H1162 Z"/>
+  </g>
+
+  <!-- Logo (256-unit artwork scaled to 384px) -->
+  <g transform="translate(112 128) scale(1.5)">
+    <rect x="8" y="8" width="240" height="240" rx="56" fill="#2f6b4f"/>
+    <path d="M8 196 H248 V192 Q248 248 192 248 H64 Q8 248 8 192 Z" fill="#234e3a"/>
+    <g fill="#bfe3e8" opacity="0.9">
+      <path d="M200 70 L222 112 H178 Z"/>
+      <path d="M200 92 L228 142 H172 Z"/>
+    </g>
+    <rect x="196" y="142" width="8" height="18" fill="#6b4a32"/>
+    <path d="M34 200 Q34 92 128 92 Q222 92 222 200 Z" fill="#6b4a32"/>
+    <path d="M74 200 Q74 128 128 128 Q182 128 182 200 Z" fill="#33291f"/>
+    <circle cx="102" cy="150" r="13" fill="#a87b55"/>
+    <circle cx="154" cy="150" r="13" fill="#a87b55"/>
+    <circle cx="102" cy="150" r="6" fill="#e0a53f"/>
+    <circle cx="154" cy="150" r="6" fill="#e0a53f"/>
+    <ellipse cx="128" cy="176" rx="34" ry="30" fill="#a87b55"/>
+    <ellipse cx="128" cy="186" rx="15" ry="11" fill="#f3ecdc"/>
+    <ellipse cx="128" cy="181" rx="6" ry="4" fill="#33291f"/>
+    <circle cx="115" cy="170" r="4" fill="#33291f"/>
+    <circle cx="141" cy="170" r="4" fill="#33291f"/>
+    <ellipse cx="104" cy="203" rx="13" ry="8" fill="#a87b55"/>
+    <ellipse cx="152" cy="203" rx="13" ry="8" fill="#a87b55"/>
+    <circle cx="62" cy="62" r="16" fill="#e0a53f"/>
+  </g>
+
+  <!-- Wordmark and tagline -->
+  <g font-family="Avenir Next, Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="576" y="300" font-size="120" font-weight="700" fill="#234e3a" letter-spacing="-2">Cubhouse</text>
+    <rect x="580" y="330" width="96" height="8" rx="4" fill="#e0a53f"/>
+    <text x="578" y="398" font-size="38" font-weight="500" fill="#33291f">Private family photo sharing</text>
+    <text x="578" y="446" font-size="38" font-weight="500" fill="#33291f">you can host yourself.</text>
+    <text x="578" y="512" font-size="26" font-weight="500" fill="#6b4a32" opacity="0.85">Invite-only  ·  Encrypted storage  ·  No ads, no trackers</text>
+  </g>
+</svg>
