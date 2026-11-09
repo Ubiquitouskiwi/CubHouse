@@ -112,7 +112,9 @@ function photoRoutes(ctx) {
     }
     // Judge widening by who can actually see the photo, not by how the
     // audience is spelled (listing every member equals "everyone").
-    const members = (await store.listUsers()).filter((u) => !u.disabled && u.role !== ROLES.PARENT);
+    const members = (await store.listUsers()).filter(
+      (u) => !u.disabled && u.role !== ROLES.PARENT && u.role !== ROLES.OPERATOR
+    );
     const widening = photos.some((p) => isWideningPhotoChange(p, { ...p, ...changes }, members));
     if (widening) {
       const outcome = await governance.requestAction(req, {
@@ -324,7 +326,7 @@ function photoRoutes(ctx) {
         store.listDownloadsByPhoto(photo.id),
         store.listUploadProfiles(),
       ]);
-      members = members.filter((m) => !m.disabled);
+      members = members.filter((m) => !m.disabled && m.role !== ROLES.OPERATOR);
     }
     const [albums, allComments, reactionSummary] = await Promise.all([
       store.listAlbumsByOwner(user.id),

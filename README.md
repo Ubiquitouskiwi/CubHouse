@@ -139,7 +139,48 @@ and email (for an uptime monitor).
 
 Production refuses to start on any unsafe configuration: weak or missing secrets, no database,
 in-memory sessions, local media storage, a missing proxy hop count, guardians without required
-two-step sign-in, or a developer account present.
+two-step sign-in, or a development (`dev` role) test account present. The support operator
+account below is a different role and is allowed.
+
+### Support account (unlocking a locked-out guardian)
+
+When a family has one guardian and that guardian is locked out (too many wrong passwords, a
+forgotten password, or a lost phone), nobody in the family can let them back in. The person who
+runs the server can create a **support operator** account for that. It can only open the
+**Support** page: it sees each account's name, masked email, role, lock state, failed-attempt
+count, two-step status and last sign-in, and it can **unlock**, **reset the password** (a
+temporary password shown once) or **reset two-step verification**. It cannot see photos, albums,
+comments, groups or Admin, and it cannot act on itself or on another operator.
+
+Create it on the server, with the app's env file loaded (use an email that is not a family
+account):
+
+```bash
+sudo -u family-photos bash -c 'set -a; . /etc/family-photos/app.env; set +a; cd /opt/family-photos; \
+  node scripts/create-operator.js support@example.org "Site developer"'
+```
+
+It prints a temporary password once (valid 24 hours). Sign in with it, choose a new password, then
+turn on two-step verification: the account cannot do anything until both are done. The guardians
+are emailed that it was created, and they can remove it any time in **Admin, Members**. No web page
+can create the role or grant it to anyone.
+
+The unlock flow:
+
+1. Confirm it is really them: call them on a number you already know.
+2. Sign in, open **Support**, find the account, and choose **Unlock sign-in**, **Reset password**
+   or **Reset two-step verification**.
+3. Type the action word shown (`UNLOCK`, `RESET PASSWORD` or `RESET MFA`) and a **new** code from
+   your authenticator app (recovery codes are not accepted here).
+4. For a password reset, read the temporary password to them by phone. It is not shown again, it
+   expires in 24 hours, and they must choose a new password when they sign in. A two-step reset
+   signs them out everywhere, and they set it up again at the next sign-in.
+
+Every action is recorded in the family's audit trail under the operator's name (`support.unlocked`,
+`support.password_reset`, `support.mfa_reset`; refused attempts are `support.denied` and
+`support.mfa_failed`). The person and the guardians are emailed, and the person sees a notice at
+their next sign-in. The older break-glass, `node scripts/issue-reset-code.js`, still works when no
+one can sign in at all (see the [runbook](./docs/RUNBOOK.md#1b-a-guardian-lost-their-phone-two-step-codes)).
 
 ### Configuration
 

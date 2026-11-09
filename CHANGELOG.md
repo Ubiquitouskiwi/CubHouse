@@ -19,6 +19,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Support operator account for the site's developer, created only with
+  `node scripts/create-operator.js`. It must use two-step verification and can open only the
+  Support page: unlock an account, reset a password (temporary password shown once, changed at
+  sign-in) or reset two-step verification. Each action needs a typed confirmation and a fresh
+  authenticator code, and is audited and announced to the person and the guardians. It cannot see
+  family content or act on itself or another operator, and guardians can remove it.
 - PostgreSQL data store (`src/store/pgStore.js`, `deploy/sql/002_data_store.sql`). The whole test
   suite runs against it with `npm run test:pg`, and in CI.
 - Account recovery: guardian-issued one-time reset codes (delayed and cancellable for guardians),

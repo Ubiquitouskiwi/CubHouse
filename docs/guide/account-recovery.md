@@ -96,9 +96,23 @@ Other things a guardian can do:
 
 ## The only guardian is locked out
 
-If there is only one guardian and they have lost both their phone and their recovery codes, there
-is no way back in through the site. Whoever runs the server can issue a reset code there. The
-steps are in [the runbook](../RUNBOOK.md#1b-a-guardian-lost-their-phone-two-step-codes). It is
+If there is only one guardian and they are locked out, forgot their password, or lost both their
+phone and their recovery codes, ask the person who runs the site. If they set up a **support
+account**, they can, from its **Support** page:
+
+- **Unlock sign-in** after too many wrong passwords,
+- **Reset the password**: they read you a temporary password by phone, and you choose a new one
+  as soon as you sign in,
+- **Reset two-step verification**: you sign in with your password, then set it up again on your
+  new phone.
+
+They will check it is really you first. Each action emails you and every guardian, shows you a
+notice the next time you sign in, and is recorded in the audit trail (**Admin**, **Audit trail**)
+under their name. The support account cannot see photos, albums or comments, and guardians can
+remove it in **Admin**, **Members**.
+
+If there is no support account, whoever runs the server can issue a reset code there. The steps
+are in [the runbook](../RUNBOOK.md#1b-a-guardian-lost-their-phone-two-step-codes). It is also
 recorded in the audit trail.
 
 Avoid this by having two guardians and keeping printed recovery codes somewhere safe.

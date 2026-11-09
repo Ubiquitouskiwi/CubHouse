@@ -38,6 +38,11 @@ const USER_MUTABLE = [
   'privacyAcceptedAt',
   'commentsMuted',
   'mustChangePassword',
+  // Support operator actions (see src/routes/support.js).
+  'tempPasswordExpiresAt',
+  'mustEnrollMfa',
+  'supportNotices',
+  'lastLoginAt',
 ];
 
 const PHOTO_BOOL = ['hidden', 'downloadable', 'watermark', 'commentsEnabled', 'reactionsEnabled', 'pendingApproval'];
@@ -997,6 +1002,27 @@ class PgStore {
 
   async clearAuthFailureState(key) {
     await this.pool.query('DELETE FROM app_auth_failures WHERE key = $1', [key]);
+  }
+
+  // Every counter for one sign-in identity: `acct:<id>` and each
+  // `ip:<ip>:<id>`. Compared with right() rather than LIKE so an identity
+  // holding % or _ cannot widen the match.
+  async listAuthFailureStatesFor(identity) {
+    const { rows } = await this.pool.query(
+      `SELECT key, count, locked_until FROM app_auth_failures
+       WHERE key = $1 OR (left(key, 3) = 'ip:' AND right(key, char_length($2)) = $2)`,
+      [`acct:${identity}`, `:${identity}`]
+    );
+    return rows.map((r) => ({ key: r.key, count: r.count, lockedUntil: Number(r.locked_until) }));
+  }
+
+  async clearAuthFailureStatesFor(identity) {
+    const { rowCount } = await this.pool.query(
+      `DELETE FROM app_auth_failures
+       WHERE key = $1 OR (left(key, 3) = 'ip:' AND right(key, char_length($2)) = $2)`,
+      [`acct:${identity}`, `:${identity}`]
+    );
+    return rowCount;
   }
 
   // --- Security audit trail (append-only, hash-chained) ---

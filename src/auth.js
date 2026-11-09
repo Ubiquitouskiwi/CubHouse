@@ -72,6 +72,19 @@ function requireDevOrParent(req, res, next) {
   return res.redirect(req.user ? '/home' : '/login');
 }
 
+// Support operator, with two-step verification on. Anyone else signed in
+// gets a 403 (not a redirect), so a guardian cannot mistake the page for theirs.
+function requireOperator(req, res, next) {
+  if (!req.user) {
+    req.flash('error', 'Please sign in to continue.');
+    return res.redirect('/login');
+  }
+  if (req.user.role === ROLES.OPERATOR && req.user.mfaEnabled) {
+    return next();
+  }
+  return res.status(403).render('error', { title: 'Not allowed', message: 'You do not have access to that page.' });
+}
+
 function redirectIfAuthed(req, res, next) {
   if (req.session && req.session.userId) {
     return res.redirect('/home');
@@ -87,5 +100,6 @@ module.exports = {
   requireAuth,
   requireParent,
   requireDevOrParent,
+  requireOperator,
   redirectIfAuthed,
 };

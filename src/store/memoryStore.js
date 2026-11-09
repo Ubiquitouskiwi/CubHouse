@@ -37,6 +37,11 @@ const USER_MUTABLE = [
   'privacyAcceptedAt',
   'commentsMuted',
   'mustChangePassword',
+  // Support operator actions (see src/routes/support.js).
+  'tempPasswordExpiresAt',
+  'mustEnrollMfa',
+  'supportNotices',
+  'lastLoginAt',
 ];
 
 const PHOTO_BOOL = [
@@ -997,6 +1002,25 @@ class MemoryStore {
 
   async clearAuthFailureState(key) {
     this.authFailureStates.delete(key);
+  }
+
+  /** Every counter for one sign-in identity: `acct:<id>` and each `ip:<ip>:<id>`. */
+  async listAuthFailureStatesFor(identity) {
+    const out = [];
+    for (const [key, state] of this.authFailureStates) {
+      if (key === `acct:${identity}` || (key.startsWith('ip:') && key.endsWith(`:${identity}`))) {
+        out.push({ key, count: state.count || 0, lockedUntil: state.lockedUntil || 0 });
+      }
+    }
+    return out;
+  }
+
+  async clearAuthFailureStatesFor(identity) {
+    const states = await this.listAuthFailureStatesFor(identity);
+    for (const s of states) {
+      this.authFailureStates.delete(s.key);
+    }
+    return states.length;
   }
 
   // --- Security audit trail (append-only, hash-chained) ---

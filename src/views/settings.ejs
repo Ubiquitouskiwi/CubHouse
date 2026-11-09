@@ -80,6 +80,7 @@
   </form>
 </section>
 
+<% if (user.role !== 'operator') { %>
 <section class="card">
   <h2>Your data</h2>
   <p class="muted">Download a copy of everything this site holds about you: your account, comments, reactions, albums, and download history.</p>
@@ -89,7 +90,9 @@
   </form>
 </section>
 
-<% if (user.role !== 'parent') { %>
+<% } %>
+
+<% if (user.role !== 'parent' && user.role !== 'operator') { %>
 <section class="card danger-zone">
   <h2>Delete account</h2>
   <p class="muted">

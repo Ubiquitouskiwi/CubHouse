@@ -49,11 +49,21 @@ function isRecoveryCodeShape(value) {
   return RECOVERY_RE.test(value);
 }
 
+/**
+ * Temporary password issued by the support operator: XXXX-XXXX-XXXX-XXXX
+ * (80 bits). It becomes the account's password (bcrypt, like any other), is
+ * shown once, works until it expires, and must be changed at first sign-in.
+ */
+function generateTempPassword() {
+  return `${randomGroup(4)}-${randomGroup(4)}-${randomGroup(4)}-${randomGroup(4)}`;
+}
+
 module.exports = {
   generateResetCode,
   isResetCodeShape,
   generateRecoveryCodes,
   isRecoveryCodeShape,
+  generateTempPassword,
   hashSecret,
   normalizeCode,
   RECOVERY_CODE_COUNT,

@@ -18,6 +18,10 @@ module.exports = function accountRoutes(ctx) {
   const router = createRouter();
   const kek = deriveKey(config.encryptionKey);
 
+  // Guardians (when configured) and the support operator (always) keep it on.
+  const mfaRequiredFor = (user) =>
+    user.role === 'operator' || (user.role === 'parent' && config.parentAuth.requireMfa);
+
   // --- Privacy notice (public, so invitees can read it before joining) ---
 
   router.get('/privacy', (req, res) => {
@@ -63,7 +67,7 @@ module.exports = function accountRoutes(ctx) {
       title: 'Security',
       user,
       setup,
-      mfaRequired: user.role === 'parent' && config.parentAuth.requireMfa,
+      mfaRequired: mfaRequiredFor(user),
       newRecoveryCodes,
       recoveryCodesLeft: (user.mfaRecoveryCodes || []).length,
     });
@@ -88,6 +92,7 @@ module.exports = function accountRoutes(ctx) {
       mfaSecretSealed: sealText(kek, secret, `mfa:${user.id}`),
       mfaLastCounter: counter,
       mfaRecoveryCodes: recoveryCodes.map(hashSecret),
+      mustEnrollMfa: false,
     });
     delete req.session.mfaSetupSecret;
     req.session.newRecoveryCodes = recoveryCodes;
@@ -98,8 +103,8 @@ module.exports = function accountRoutes(ctx) {
 
   router.post('/settings/security/mfa/disable', requireAuth, async (req, res) => {
     const user = req.user;
-    if (user.role === 'parent' && config.parentAuth.requireMfa) {
-      req.flash('error', 'Guardian accounts must keep two-step verification on.');
+    if (mfaRequiredFor(user)) {
+      req.flash('error', 'This account must keep two-step verification on.');
       return res.redirect('/settings/security');
     }
     const password = str(req.body.password, { field: 'password', max: 1024, trim: false });
