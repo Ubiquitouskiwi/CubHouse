@@ -2102,7 +2102,44 @@ button.reaction-chip:hover {
   color: var(--text);
   padding: 0.3rem 0.6rem;
   border-radius: 8px;
-  word-break: break-all;
+  /* Wrap between the groups of four, never inside one. */
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* Pairing QR code: always black on white (dark mode included), because
+   scanners need the contrast. 240px with the quiet zone inside the SVG. */
+.qr-code {
+  width: 240px;
+  max-width: 100%;
+  margin: 0.75rem 0 1rem;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.qr-code svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.setup-manual {
+  margin-bottom: 1rem;
+}
+
+.setup-manual summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.setup-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .approve-form {

@@ -10,7 +10,7 @@ const { logger } = require('../src/logger');
 const { canViewPhoto, photoCapabilities, portalCapabilities } = require('../src/permissions');
 const { createOperatorAccount, maskEmail } = require('../src/services/support');
 const { createActions } = require('../src/services/actions');
-const { startApp, seedFamily, seedUser, addPhoto, PASSWORD } = require('./helpers');
+const { startApp, seedFamily, seedUser, addPhoto, setupKeyFrom, PASSWORD } = require('./helpers');
 
 const NEW_PW = 'a brand new long passphrase';
 const OP_EMAIL = 'support@test.com';
@@ -120,7 +120,7 @@ test('an operator without two-step verification must enroll first and cannot tur
   await o.login(OP_EMAIL);
   assert.equal((await o.get('/support')).location, '/settings/security');
   const page = await o.get('/settings/security');
-  const secret = /class="setup-key"><code>([A-Z2-7 ]+)<\/code>/.exec(page.body)[1].replace(/ /g, '');
+  const secret = setupKeyFrom(page.body);
   await o.post('/settings/security/mfa/enable', { code: totp.generate(secret) });
   assert.equal((await o.get('/support')).status, 200);
   await o.post('/settings/security/mfa/disable', { password: PASSWORD, code: totp.generate(secret) });
@@ -267,7 +267,7 @@ test('reset two-step verification: cleared, sessions ended, set up again at next
   assert.equal((await p.login('parent@test.com')).location, '/home');
   assert.equal((await p.get('/admin')).location, '/settings/security');
   const page = await p.get('/settings/security');
-  const fresh = /class="setup-key"><code>([A-Z2-7 ]+)<\/code>/.exec(page.body)[1].replace(/ /g, '');
+  const fresh = setupKeyFrom(page.body);
   await p.post('/settings/security/mfa/enable', { code: totp.generate(fresh) });
   assert.equal((await p.get('/admin')).status, 200);
 });

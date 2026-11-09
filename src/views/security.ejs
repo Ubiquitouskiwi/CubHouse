@@ -35,15 +35,25 @@
     <% if (mfaRequired) { %>
       <div class="alert alert-error"><p><%= user.role === 'operator' ? 'The support account' : 'Guardian accounts' %> must turn this on before using the site.</p></div>
     <% } %>
-    <p>
-      Add <%= siteName %> to an authenticator app (for example the one built into
-      your phone's password manager). Choose "enter a setup key" and type:
+    <p id="qr-help">
+      Scan this code with any authenticator app (Google Authenticator, Authy,
+      1Password, Microsoft Authenticator, or the one built into your phone's
+      password manager) to add <%= siteName %>.
     </p>
-    <p class="setup-key"><code><%= setup.secret %></code></p>
-    <p class="muted">
-      Or open this link on the phone that has your authenticator:
-      <a href="<%= setup.uri %>">add to authenticator</a>.
-    </p>
+    <%# Built server-side by src/security/qr.js from validated library output only; no user text inside. %>
+    <figure class="qr-code" aria-describedby="qr-help"><%- setup.qrSvg %></figure>
+    <details class="setup-manual">
+      <summary>Can't scan? Enter this key</summary>
+      <p>In your authenticator app, choose "enter a setup key" and type:</p>
+      <p class="setup-key">
+        <code id="mfa-setup-key"><%= setup.secret %></code>
+        <button type="button" class="ghost-button" data-copy="#mfa-setup-key" aria-live="polite" hidden>Copy key</button>
+      </p>
+      <p class="muted">
+        Or open this link on the phone that has your authenticator:
+        <a href="<%= setup.uri %>">add to authenticator</a>.
+      </p>
+    </details>
     <form class="stacked-form" method="post" action="/settings/security/mfa/enable">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <label>

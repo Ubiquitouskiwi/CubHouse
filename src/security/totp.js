@@ -93,16 +93,24 @@ function verify(secret, code, { timeMs = Date.now(), window = 1 } = {}) {
   return -1;
 }
 
+/**
+ * Key URI for authenticator apps. Issuer and account are each percent-encoded
+ * (RFC 3986, so a space is %20, never the form-style "+") and joined by a
+ * literal colon, the form the Key URI format documents.
+ */
 function otpauthUri({ secret, account, issuer = 'Cubhouse' }) {
-  const label = encodeURIComponent(`${issuer}:${account}`);
-  const params = new URLSearchParams({
-    secret,
-    issuer,
-    algorithm: 'SHA1',
-    digits: String(DIGITS),
-    period: String(STEP_SECONDS),
-  });
-  return `otpauth://totp/${label}?${params.toString()}`;
+  const enc = encodeURIComponent;
+  const label = `${enc(issuer)}:${enc(account)}`;
+  const params = [
+    ['secret', secret],
+    ['issuer', issuer],
+    ['algorithm', 'SHA1'],
+    ['digits', String(DIGITS)],
+    ['period', String(STEP_SECONDS)],
+  ]
+    .map(([k, v]) => `${k}=${enc(v)}`)
+    .join('&');
+  return `otpauth://totp/${label}?${params}`;
 }
 
 module.exports = {

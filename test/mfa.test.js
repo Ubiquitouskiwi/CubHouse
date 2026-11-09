@@ -4,7 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const config = require('../src/config');
 const totp = require('../src/security/totp');
-const { startApp, seedFamily, PASSWORD } = require('./helpers');
+const { startApp, seedFamily, setupKeyFrom, PASSWORD } = require('./helpers');
 
 test('TOTP matches the RFC 6238 SHA-1 test vector', () => {
   // RFC 6238 Appendix B secret "12345678901234567890" at T=59s -> 94287082 (8 digits; we use 6).
@@ -20,7 +20,7 @@ test('TOTP matches the RFC 6238 SHA-1 test vector', () => {
 // boundary passes in between, the "replay" is really a fresh, valid code.
 async function enroll(c) {
   const page = await c.get('/settings/security');
-  const secret = /class="setup-key"><code>([A-Z2-7 ]+)<\/code>/.exec(page.body)[1].replace(/ /g, '');
+  const secret = setupKeyFrom(page.body);
   const enrolledAt = Date.now();
   const code = totp.generate(secret, enrolledAt);
   const res = await c.post('/settings/security/mfa/enable', { code });

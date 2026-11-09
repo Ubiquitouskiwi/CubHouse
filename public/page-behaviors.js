@@ -61,4 +61,26 @@
     box.addEventListener('change', sync);
     sync();
   });
+
+  // Copy a value to the clipboard (local only, nothing is sent anywhere):
+  // <button data-copy="#id" hidden>. Spaces are dropped, so a key shown in
+  // groups of four pastes as one string. Shown only where the API exists.
+  if (navigator.clipboard && window.isSecureContext) {
+    document.querySelectorAll('[data-copy]').forEach(function (button) {
+      var source = document.querySelector(button.getAttribute('data-copy'));
+      if (!source) {
+        return;
+      }
+      var label = button.textContent;
+      button.hidden = false;
+      button.addEventListener('click', function () {
+        navigator.clipboard.writeText(source.textContent.replace(/\s+/g, '')).then(function () {
+          button.textContent = 'Copied';
+          setTimeout(function () {
+            button.textContent = label;
+          }, 2000);
+        });
+      });
+    });
+  }
 })();
