@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "SEED_TEST_ACCOUNTS=true node --watch src/server.js",
-    "test": "node --test \"test/**/*.test.js\"",
+    "test": "node --test test/*.test.js",
     "lint": "eslint .",
     "audit:prod": "npm audit --omit=dev --audit-level=high",
     "check": "npm run lint && npm test && npm run test:pg && npm run audit:prod",

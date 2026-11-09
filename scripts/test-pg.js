@@ -35,7 +35,14 @@ async function main() {
   }
   await client.end();
   // One file at a time: the test files share this one database.
-  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', 'test/**/*.test.js'], {
+  // List the files ourselves: Node 20's --test does not expand glob patterns.
+  const testDir = path.join(__dirname, '..', 'test');
+  const testFiles = fs
+    .readdirSync(testDir)
+    .filter((f) => f.endsWith('.test.js'))
+    .sort()
+    .map((f) => path.join(testDir, f));
+  const run = spawnSync(process.execPath, ['--test', '--test-concurrency=1', ...testFiles], {
     stdio: 'inherit',
     env: { ...process.env, TEST_DATABASE_URL: url },
   });

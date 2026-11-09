@@ -24,7 +24,7 @@ set -euo pipefail
 SAMPLE="${DRILL_SAMPLE:-5}"
 
 case "$SCRATCH_DATABASE_URL" in
-  *prod*|*production*)
+  *prod*) # also matches "production"
     echo "refusing: SCRATCH_DATABASE_URL looks like production" >&2
     exit 2
     ;;
