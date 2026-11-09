@@ -1,0 +1,81 @@
+# Publish docs/guide to the repository's GitHub Wiki whenever the guide changes.
+# The wiki is generated: edit docs/guide, never the wiki. Third-party actions are
+# pinned to commit SHAs, like ci.yml.
+#
+# One-time setup: enable Wiki (Settings > General > Features) and create any first
+# page in the web UI. GitHub only creates the .wiki.git repository after that.
+
+name: Wiki sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/guide/**'
+      - '.github/workflows/wiki-sync.yml'
+      - 'scripts/wiki-sync.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One sync at a time, and never cancel one half way through a push.
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Publish the user guide to the wiki
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      WIKI_DIR: ${{ runner.temp }}/wiki
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      # The token is read by a credential helper from the environment, so it is
+      # never in a URL, a command line, .git/config, or the log.
+      - name: Clone the wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          helper='!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f'
+          if ! git -c credential.helper= -c credential.helper="$helper" \
+              clone --quiet "https://github.com/${GITHUB_REPOSITORY}.wiki.git" "$WIKI_DIR" 2> clone.err; then
+            if grep -qi 'not found' clone.err; then
+              echo "::error title=Wiki not set up::The wiki repository does not exist yet. One-time setup: in the repository Settings > General > Features, enable Wiki, then open the Wiki tab and create any first page in the web UI (GitHub only creates the .wiki.git repository after the first page exists). Then re-run this workflow."
+            else
+              echo "::error title=Wiki clone failed::Could not clone the wiki repository."
+              cat clone.err >&2
+            fi
+            exit 1
+          fi
+          git -C "$WIKI_DIR" config credential.helper "$helper"
+
+      - name: Build the wiki pages from docs/guide
+        run: node scripts/wiki-sync.js --guide docs/guide --out "$WIKI_DIR" --repo "$GITHUB_REPOSITORY" --sha "$GITHUB_SHA"
+
+      - name: Commit and push only if something changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Same secret and check as ci.yml, over the generated pages.
+          FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
+        working-directory: ${{ runner.temp }}/wiki
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Wiki already up to date'
+            exit 0
+          fi
+          node "$GITHUB_WORKSPACE/scripts/check-forbidden-names.js" --staged
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit --quiet -m "Sync user guide from ${GITHUB_SHA::7}"
+          # GitHub wikis have a single branch, master (checked: this wiki's HEAD is master).
+          git push --quiet origin master
