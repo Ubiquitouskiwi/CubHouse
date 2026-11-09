@@ -354,3 +354,28 @@ test('per-identity lockout lookup does not match a similar email', async () => {
   assert.equal((await store.getAuthFailureState('acct:aa@test.com')).count, 2);
   assert.equal((await store.getAuthFailureState('ip:127.0.0.1:aa@test.com')).count, 2);
 });
+
+test('performAction dispatches only on an ACTIONS entry, never on a raw string', async (t) => {
+  const { performAction, ACTIONS } = require('../src/services/support');
+  const env = await startApp();
+  t.after(env.close);
+  const { member } = await seedFamily(env);
+  await assert.rejects(performAction(env.store, config, 'unlock', member), /unknown support action/);
+  await assert.rejects(performAction(env.store, config, { id: 'unlock' }, member), /unknown support action/);
+  const done = await performAction(env.store, config, ACTIONS.unlock, member);
+  assert.equal(typeof done.details.cleared, 'number');
+});
+
+test('Support routes are rate limited per signed-in user', async (t) => {
+  const { env, o, member } = await setup(t);
+  let last = null;
+  for (let i = 0; i < 101; i += 1) {
+    last = await o.get(i % 2 ? '/support' : `/support/accounts/${member.id}/unlock`);
+  }
+  assert.equal(last.status, 429);
+  assert.ok(last.headers.ratelimit || last.headers['ratelimit-policy']);
+  // Another user is not affected by the operator's bucket.
+  const p = env.client();
+  await p.login('parent@test.com');
+  assert.equal((await p.get('/support')).status, 403);
+});

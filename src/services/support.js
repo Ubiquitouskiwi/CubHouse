@@ -16,6 +16,7 @@ const { validateEmail, validateDisplayName } = require('../validation');
 
 const ACTIONS = Object.freeze({
   unlock: Object.freeze({
+    id: 'unlock',
     word: 'UNLOCK',
     label: 'Unlock sign-in',
     auditType: 'support.unlocked',
@@ -25,6 +26,7 @@ const ACTIONS = Object.freeze({
     past: 'unlocked your sign-in after too many failed attempts',
   }),
   'reset-password': Object.freeze({
+    id: 'reset-password',
     word: 'RESET PASSWORD',
     label: 'Reset password',
     auditType: 'support.password_reset',
@@ -34,6 +36,7 @@ const ACTIONS = Object.freeze({
     past: 'reset your password',
   }),
   'reset-mfa': Object.freeze({
+    id: 'reset-mfa',
     word: 'RESET MFA',
     label: 'Reset two-step verification',
     auditType: 'support.mfa_reset',
@@ -97,18 +100,20 @@ async function accountState(store, user, now = Date.now()) {
 }
 
 /**
- * Apply one action to `target`. Returns { details, tempPassword? }: details
- * are safe for the audit trail; tempPassword is for the operator's screen
- * only and is never stored in plaintext, logged or emailed.
+ * What each action changes, keyed by the action's own id. Dispatch goes
+ * through this table with an entry from ACTIONS, never the request value.
+ * Each handler gets `notices` (the in-app notice list to store) and returns
+ * { details, tempPassword? }: details are safe for the audit trail;
+ * tempPassword is for the operator's screen only and is never stored in
+ * plaintext, logged or emailed.
  */
-async function performAction(store, config, key, target, now = Date.now()) {
-  const notices = [...(target.supportNotices || []), { action: key, at: new Date(now).toISOString() }].slice(-10);
-  if (key === 'unlock') {
+const HANDLERS = Object.freeze({
+  unlock: async (store, config, target, notices) => {
     const cleared = await store.clearAuthFailureStatesFor(target.email);
     await store.updateUser(target.id, { supportNotices: notices });
     return { details: { cleared } };
-  }
-  if (key === 'reset-password') {
+  },
+  'reset-password': async (store, config, target, notices, now) => {
     const tempPassword = generateTempPassword();
     const expiresAt = new Date(now + config.security.resetCodeTtlMs).toISOString();
     await store.updateUser(target.id, {
@@ -120,8 +125,8 @@ async function performAction(store, config, key, target, now = Date.now()) {
     await store.bumpSessionVersion(target.id);
     await store.clearAuthFailureStatesFor(target.email);
     return { details: { expiresAt }, tempPassword, expiresAt };
-  }
-  if (key === 'reset-mfa') {
+  },
+  'reset-mfa': async (store, config, target, notices) => {
     await store.updateUser(target.id, {
       mfaEnabled: false,
       mfaSecretSealed: null,
@@ -133,8 +138,17 @@ async function performAction(store, config, key, target, now = Date.now()) {
     });
     await store.bumpSessionVersion(target.id);
     return { details: { hadMfa: Boolean(target.mfaEnabled) } };
+  },
+});
+
+/** Apply one `action` (an entry of ACTIONS) to `target`. */
+async function performAction(store, config, action, target, now = Date.now()) {
+  const handler = action && Object.hasOwn(HANDLERS, action.id) ? HANDLERS[action.id] : null;
+  if (!handler || ACTIONS[action.id] !== action) {
+    throw new Error('unknown support action');
   }
-  throw new Error('unknown support action');
+  const notices = [...(target.supportNotices || []), { action: action.id, at: new Date(now).toISOString() }].slice(-10);
+  return handler(store, config, target, notices, now);
 }
 
 /**
