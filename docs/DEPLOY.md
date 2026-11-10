@@ -29,8 +29,13 @@ Follow **docs/RUNBOOK.md, section 6 (Key escrow)** now: two offline copies of
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/sql/001_security.sql
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/sql/002_data_store.sql
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/sql/003_usage_metrics.sql
+   psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f deploy/sql/004_video.sql
    psql "$MIGRATION_DATABASE_URL" -c "ALTER ROLE photos_app PASSWORD '<long random>'"
    ```
+
+   Videos need ffmpeg on the server too (the container image already has it):
+   `sudo apt-get install -y --no-install-recommends ffmpeg`. Without it the site runs, and video
+   uploads say they are unavailable.
 
 3. The app connects as `photos_app` with `sslmode=verify-full` and the provider's CA certificate
    (`PGSSLROOTCERT`). `photos_app` cannot change the schema or edit the audit trail.

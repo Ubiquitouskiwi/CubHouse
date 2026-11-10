@@ -8,6 +8,21 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Videos, phase 1. Phone clips (MP4/MOV, H.264 or HEVC, up to 3:00) go in the same bulk uploader
+  as photos, with Waiting, Uploading %, Processing, then Added / Sent for approval / Failed with a
+  plain reason. Videos upload in 8 MB chunks to a per-upload session (each chunk authenticated and
+  CSRF-checked; resumes after a dropped connection; 500 MB cap; idle sessions expire and their temp
+  files are deleted), are checked by magic bytes and ffprobe, and are processed by a background job
+  queue in the database (one at a time, niced, 2 threads, retried a limited number of times) into
+  720p H.264/AAC with every metadata tag removed, location included. The original is deleted. The
+  stored copy is encrypted in 1 MiB AES-256-GCM segments and streamed with HTTP Range support.
+  The gallery shows a poster with a play button and the length.
+- Downloads are off for videos: no button, a short note, and the server refuses them.
+- Migration `deploy/sql/004_video.sql` (table `app_video_jobs`). Run it before deploying.
+- The image now installs Debian's `ffmpeg` package (`--no-install-recommends`), which makes it
+  larger by an estimated 250-400 MB; measure with `docker image ls` after the first build. CI
+  installs ffmpeg so the video tests run.
+
 - Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
   status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
   photo and for all, an end summary with a link to the new photos, and a warning before leaving

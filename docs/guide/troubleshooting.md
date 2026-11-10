@@ -80,7 +80,8 @@ Type it exactly as given, with the email the guardian expected. Otherwise ask fo
 - "That photo is too large. Please keep uploads under 15 MB." Pick a smaller version, or send it
   from your phone's share menu, which often shrinks it.
 - "Animated or multi-page images are not supported." Upload a still photo.
-- "This is a video." Only photos can be uploaded for now.
+- "Videos are added with the uploader on Home..." Your browser has JavaScript turned off, which
+  the video uploader needs. Turn it on, or send the video from another browser.
 - "This is an iPhone HEIC photo." See the first point. Photos picked from the iPhone's photo
   library are usually converted for you; HEIC files copied to a computer are not.
 - "The connection dropped." Your Wi-Fi or mobile signal cut out. Once it is back, select **Retry**
@@ -91,6 +92,27 @@ Type it exactly as given, with the email the guardian expected. Otherwise ask fo
   photos that did not go through. Photos marked **Added** or **Sent for approval** are already safe.
 - "Already in this list, so it was skipped." You picked the same photo twice. Nothing to do.
 - The **Send to parents** (or **Upload photo**) button stays grey until you choose a photo.
+
+## My video will not upload or play
+
+- "Longer than 3 minutes." Trim it on your phone (open it, select **Edit**, drag the ends in), save
+  it as a new clip, then add it again.
+- "Too big: over 500 MB." Trim it, or send a lower-quality copy (on iPhone, **Settings**,
+  **Camera**, **Record Video**, choose 1080p).
+- "Cubhouse can't read this kind of video." Use the phone's own camera clips (MP4 or MOV). Screen
+  recordings and clips from other apps sometimes use other formats.
+- "We couldn't process this video." Select **Retry**. If it fails again, the file may be damaged;
+  try a different copy.
+- "Video limit reached for now." About 20 videos (2 GB) an hour per person. Wait, then select
+  **Retry**.
+- "This upload expired." The upload paused for more than half an hour. Select **Retry** to send it
+  again from the start.
+- "Videos cannot be added right now." Tell a guardian: the server is missing its video tools.
+- It says **Processing** for a long time. Videos are processed one at a time, so a busy day means a
+  short wait. You can leave the page; it carries on without you.
+- No Download button on a video. That is on purpose: videos stay in Cubhouse for now.
+- A video will not play on an old phone or browser. Update the browser. Videos are saved in the
+  most widely supported format (H.264), so any phone from the last ten years should play them.
 
 ## On my phone I cannot reach the menu
 

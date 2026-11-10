@@ -71,6 +71,7 @@ StarlingTek's "Adding a project".
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/001_security.sql
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/002_data_store.sql
    psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/003_usage_metrics.sql
+   psql "$MIGRATION_DATABASE_URL" -v ON_ERROR_STOP=1 -f /opt/family-photos/deploy/sql/004_video.sql
    psql "$MIGRATION_DATABASE_URL" -c "ALTER ROLE photos_app PASSWORD '<long random>'"
    ```
 
@@ -103,11 +104,17 @@ key. A public repository needs no key.
 Optionally add the webhook that `stk add` prints (GitHub, Settings, Webhooks; push events only) for
 instant deploys. Without it the poller deploys within 5 minutes.
 
-Give image processing room (large photos are decoded in memory; the default limit is 512 MB):
+Give image and video processing room. Large photos are decoded in memory, and ffmpeg decoding a
+phone's 4K HEVC clip while encoding 720p uses a few hundred MB more (the default limit is 512 MB):
 
 ```bash
-stk set family-photos memoryLimit=768m
+stk set family-photos memoryLimit=1280m
 ```
+
+Videos are processed one at a time, niced and limited to 2 threads (`VIDEO_THREADS`), so the other
+sites on the droplet keep their CPU. Upload temp files and transcode scratch live in
+`/data/video-work` (from `STK_DATA_DIR`), so a queued video survives a release swap; an upload is
+at most 500 MB and the app refuses new ones when less than 1 GB beyond that is free.
 
 ## 6. Settings, headers and upload cap
 
