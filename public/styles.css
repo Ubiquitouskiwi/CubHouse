@@ -2495,3 +2495,114 @@ button.reaction-chip:hover {
     display: none;
   }
 }
+
+/* --- Videos: gallery tiles, viewer, no-download note --- */
+
+.video-open {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+.video-play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3rem;
+  height: 3rem;
+  margin: -1.5rem 0 0 -1.5rem;
+  border-radius: 50%;
+  background: rgba(20, 30, 24, 0.62);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.video-play-badge::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 0.6rem 0 0.6rem 1rem;
+  border-color: transparent transparent transparent #fffaf0;
+}
+
+.video-open:hover .video-play-badge,
+.video-open:focus-visible .video-play-badge {
+  background: var(--pine-deep);
+}
+
+.video-duration {
+  position: absolute;
+  right: 0.4rem;
+  bottom: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  background: rgba(20, 30, 24, 0.72);
+  color: #fffaf0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.photo-detail-video {
+  width: 100%;
+  max-height: 70vh;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+
+.video-no-download {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: var(--honey-soft);
+  color: var(--text);
+  max-width: 34rem;
+}
+
+.video-no-download-icon {
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.1rem;
+  border-radius: 50%;
+  background: var(--honey);
+  position: relative;
+}
+
+/* A small lock: shackle drawn by the pseudo-element over the round body. */
+.video-no-download-icon::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 0.42rem;
+  height: 0.42rem;
+  transform: translateX(-50%);
+  border: 2px solid var(--surface);
+  border-bottom: none;
+  border-radius: 0.3rem 0.3rem 0 0;
+}
+
+/* Video rows in the uploader: the blank thumb gets a small play mark. */
+.upload-item-thumb-video {
+  position: relative;
+}
+
+.upload-item-thumb-video::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 0.45rem 0 0.45rem 0.75rem;
+  border-color: transparent transparent transparent var(--muted);
+}

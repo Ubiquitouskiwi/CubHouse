@@ -78,7 +78,13 @@ module.exports = function pageRoutes(ctx) {
       groups,
       profiles,
       audiences: PHOTO_AUDIENCE,
-      uploadLimits: { maxBytes: config.uploads.maxBytes, perHour: UPLOADS_PER_HOUR },
+      uploadLimits: {
+        maxBytes: config.uploads.maxBytes,
+        perHour: UPLOADS_PER_HOUR,
+        videoMaxBytes: config.video.maxBytes,
+        videoMaxSeconds: config.video.maxSeconds,
+        videoPerHour: config.video.perHour,
+      },
     });
   });
 

@@ -83,9 +83,10 @@
           <ul class="carousel-track" data-carousel-track>
             <% recentPhotos.forEach(function (photo) { %>
               <li class="carousel-slide">
-                <a class="feed-card" href="/photos/<%= photo.id %>">
-                  <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Family photo' %>"
+                <a class="feed-card<%= photo.kind === 'video' ? ' video-open' : '' %>" href="/photos/<%= photo.id %>">
+                  <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.kind === 'video' ? 'Video: ' + (photo.caption || 'Untitled') : (photo.caption || 'Family photo') %>"
                     loading="lazy" />
+                  <% if (photo.kind === 'video') { %><span class="video-play-badge" aria-hidden="true"></span><% } %>
                   <span class="feed-caption">
                     <%= photo.caption || 'Untitled' %>
                   </span>
@@ -115,17 +116,21 @@
               <section class="card card-trail home-approvals">
                 <h2>Waiting for your approval</h2>
                 <p class="muted">
-                  Family members sent these photos in. Location and camera details were
-                  already removed. They stay private until you approve them and choose
+                  Family members sent these photos and videos in. Location and camera details were
+                  already removed. Open a video to watch it before you approve it. They stay private until you approve them and choose
                   who may see them. Sharing with the whole family needs the other
                   guardian's approval.
                 </p>
                 <div class="pending-grid">
                   <% pendingPhotos.forEach(function (photo) { %>
                     <figure class="pending-card">
-                      <a class="pending-thumb" href="/photos/<%= photo.id %>">
-                        <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Contributed photo' %>"
+                      <a class="pending-thumb<%= photo.kind === 'video' ? ' video-open' : '' %>" href="/photos/<%= photo.id %>">
+                        <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.kind === 'video' ? 'Watch the contributed video: ' + (photo.caption || 'Untitled') : (photo.caption || 'Contributed photo') %>"
                           loading="lazy" />
+                        <% if (photo.kind === 'video') { %>
+                          <span class="video-play-badge" aria-hidden="true"></span>
+                          <span class="video-duration" aria-hidden="true"><%= formatDuration(photo.video && photo.video.durationMs) %></span>
+                        <% } %>
                       </a>
                       <figcaption>
                         <span class="pending-caption">
@@ -170,13 +175,13 @@
                       <h2>Add a photo</h2>
                       <% if (photoCan.setPermissions) { %>
                         <p class="muted">
-                          Add a picture to the family library. It starts private (parents only)
+                          Add pictures or short videos to the family library. Each starts private (parents only)
                           unless you pick an upload profile. Location and camera details are
                           removed automatically.
                         </p>
                         <% } else { %>
                           <p class="muted">
-                            Share a picture with the family. The parents own the library, so
+                            Share a picture or a short video with the family. The parents own the library, so
                             your upload goes to them for approval first. Once they say yes, it
                             shows up for everyone it is shared with.
                           </p>
@@ -187,6 +192,10 @@
                               enctype="multipart/form-data"
                               data-max-bytes="<%= uploadLimits.maxBytes %>"
                               data-per-hour="<%= uploadLimits.perHour %>"
+                              data-video-url="/videos/uploads"
+                              data-video-max-bytes="<%= uploadLimits.videoMaxBytes %>"
+                              data-video-max-seconds="<%= uploadLimits.videoMaxSeconds %>"
+                              data-video-per-hour="<%= uploadLimits.videoPerHour %>"
                               data-uploader-role="<%= photoCan.setPermissions ? 'parent' : 'member' %>">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                                 <div class="upload-drop" data-upload-drop>
@@ -202,7 +211,10 @@
                                   <%= Math.round(uploadLimits.maxBytes / (1024 * 1024)) %> MB each.
                                   <span data-upload-multi-hint hidden>Pick as many as you like (about
                                     <%= uploadLimits.perHour %> an hour).</span>
-                                  Videos and iPhone HEIC files cannot be uploaded yet.
+                                  <span data-upload-video-hint hidden>Videos too: MP4 or MOV from your phone, up to
+                                    <%= Math.round(uploadLimits.videoMaxSeconds / 60) %> minutes. Location is removed from them as well.</span>
+                                  <span data-upload-novideo-hint>Videos can be added when JavaScript is turned on.</span>
+                                  iPhone HEIC photos cannot be uploaded yet.
                                 </p>
                                 <div class="upload-row">
                                   <label class="upload-caption">
@@ -221,6 +233,7 @@
                                       <% }); %>
                                     </select>
                                   </label>
+                                  <p class="upload-hint muted">Profiles apply to photos. Videos start private; share each one from its page.</p>
                                 <% } %>
                                 <div class="upload-preview" data-upload-preview hidden>
                                   <img data-upload-preview-img alt="Selected photo preview" />

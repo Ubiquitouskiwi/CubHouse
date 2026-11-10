@@ -14,6 +14,7 @@
   <p><a href="/photos">&larr; Back to photos</a></p>
   <h1><%= photo.caption || 'Untitled' %></h1>
   <span class="photo-badges">
+    <% if (photo.kind === 'video') { %><span class="badge badge-audience">Video, <%= formatDuration(photo.video && photo.video.durationMs) %></span><% } %>
     <% if (photo.pendingApproval) { %><span class="badge badge-pending">Pending approval</span><% } %>
     <% if (photo.hidden) { %><span class="badge badge-hidden">Hidden</span><% } %>
     <% if (!photo.downloadable) { %><span class="badge badge-locked">No download</span><% } %>
@@ -22,9 +23,25 @@
 </section>
 
 <section class="card photo-detail">
+  <% if (photo.kind === 'video') { %>
+    <%# Streams from /media/:id/video (Range requests, decrypted segment by segment). No download control:
+      nodownload hides the browser's own button too; the server refuses video downloads either way. %>
+    <video class="photo-detail-video" controls playsinline preload="metadata"
+      controlslist="nodownload" disablepictureinpicture
+      poster="/media/<%= photo.id %>/display" src="/media/<%= photo.id %>/video"
+      aria-label="Video: <%= photo.caption || 'Untitled' %>, <%= formatDuration(photo.video && photo.video.durationMs) %>">
+      Your browser cannot play this video here.
+    </video>
+  <% } else { %>
   <img class="photo-detail-image" src="/media/<%= photo.id %>/display" alt="<%= photo.caption || 'Family photo' %>" />
+  <% } %>
   <div class="photo-detail-actions">
-    <% if (cap.download) { %>
+    <% if (photo.kind === 'video') { %>
+      <p class="video-no-download" data-video-no-download>
+        <span class="video-no-download-icon" aria-hidden="true"></span>
+        <span><%= videoNoDownload %></span>
+      </p>
+    <% } else if (cap.download) { %>
       <a class="primary-button" href="/photos/<%= photo.id %>/download">Download</a>
       <% if (!cap.setPermissions) { %>
         <p class="muted small">Downloads are recorded, and the copy carries a reference mark. Please keep it within the family.</p>
@@ -156,11 +173,15 @@
         <span>Hide this photo (only parents can see it)</span>
       </label>
 
+      <% if (photo.kind === 'video') { %>
+      <p class="muted">Downloads are off for videos for now.</p>
+      <% } else { %>
       <label class="checkbox-row">
         <input type="checkbox" name="downloadable" data-download-toggle="#watermark-override" <%= photo.downloadable ? 'checked' : '' %> />
         <span>Allow downloads of this photo</span>
       </label>
-      <div id="watermark-override" class="indent">
+      <% } %>
+      <div id="watermark-override" class="indent"<%= photo.kind === 'video' ? ' hidden' : '' %>>
         <label class="checkbox-row">
           <input type="checkbox" name="watermarkOff" <%= photo.watermark === false ? 'checked' : '' %> />
           <span>

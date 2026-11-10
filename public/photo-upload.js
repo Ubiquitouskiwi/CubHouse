@@ -33,10 +33,17 @@
   var ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
   var HEIC_EXT = ['heic', 'heif'];
   var VIDEO_EXT = ['mov', 'mp4', 'm4v', 'avi', '3gp', 'webm', 'mkv'];
+  // Phone videos the server accepts (it re-checks the bytes and codecs).
+  var VIDEO_OK_TYPES = ['video/mp4', 'video/quicktime', 'video/x-m4v'];
+  var VIDEO_OK_EXT = ['mov', 'mp4', 'm4v'];
+  var VIDEO_POLL_MS = 3000;
+  var CHUNK_RETRIES = 5;
   // Codes after which sending more photos cannot work until the person acts.
   var STOP_CODES = ['rate_limited', 'signed_out', 'expired'];
   // Codes whose server message is already written for people; shown as is.
-  var SERVER_WORDED = ['unreadable', 'unsupported_type', 'animated', 'too_many_pixels', 'processing_failed', 'bad_caption'];
+  var SERVER_WORDED = ['unreadable', 'unsupported_type', 'animated', 'too_many_pixels', 'processing_failed', 'bad_caption',
+    'video', 'too_long', 'video_too_large', 'unsupported_video', 'video_rate_limited', 'video_busy', 'video_unavailable',
+    'upload_gone', 'not_allowed'];
 
   function extOf(name) {
     var m = /\.([a-z0-9]+)$/i.exec(String(name || ''));
@@ -54,12 +61,30 @@
     return n + ' ' + (n === 1 ? one : many);
   }
 
-  /** Checks a file the way the server will, so a bad one fails instantly. */
-  function checkFile(file, maxBytes) {
+  function isVideoFile(file) {
+    var type = String(file.type || '').toLowerCase();
+    return type.indexOf('video/') === 0 || VIDEO_EXT.indexOf(extOf(file.name)) !== -1;
+  }
+
+  /**
+   * Checks a file the way the server will, so a bad one fails instantly.
+   * `video` ({ maxBytes }) turns video uploads on; without it a video is refused.
+   */
+  function checkFile(file, maxBytes, video) {
     var type = String(file.type || '').toLowerCase();
     var ext = extOf(file.name);
-    if (type.indexOf('video/') === 0 || VIDEO_EXT.indexOf(ext) !== -1) {
-      return 'video';
+    if (isVideoFile(file)) {
+      if (!video) {
+        return 'video';
+      }
+      // MP4/MOV by type or name; WebM, AVI, MKV and the rest are refused.
+      if (VIDEO_OK_EXT.indexOf(ext) === -1 && VIDEO_OK_TYPES.indexOf(type) === -1) {
+        return 'unsupported_video';
+      }
+      if (!file.size) {
+        return 'empty';
+      }
+      return file.size > video.maxBytes ? 'video_too_large' : null;
     }
     if (type === 'image/heic' || type === 'image/heif' || HEIC_EXT.indexOf(ext) !== -1) {
       return 'heic';
@@ -90,6 +115,20 @@
         return 'Too big: over ' + mb + ' MB. Pick a smaller copy, or send it from your phone\'s share menu, which usually shrinks it.';
       case 'video':
         return 'This is a video. Only photos can be uploaded for now.';
+      case 'too_long':
+        return 'Longer than ' + Math.round((o.videoMaxSeconds || 180) / 60) + ' minutes. Trim it on your phone, ' +
+          'then add it again.';
+      case 'video_too_large':
+        return 'Too big: over ' + Math.round((o.videoMaxBytes || 500 * 1024 * 1024) / (1024 * 1024)) + ' MB. ' +
+          'Trim it on your phone, or share a smaller copy.';
+      case 'unsupported_video':
+        return 'Cubhouse can\'t read this kind of video. Phone videos (MP4 or MOV) work best.';
+      case 'processing_failed':
+        return 'We couldn\'t process this video. Select Retry, or try a different copy.';
+      case 'video_rate_limited':
+        return 'Video limit reached for now (about ' + (o.videoPerHour || 20) + ' an hour). Wait a while, then select Retry.';
+      case 'upload_gone':
+        return 'This upload expired. Select Retry to send the video again.';
       case 'heic':
         return 'This is an iPhone HEIC photo, which Cubhouse cannot read yet. On the iPhone, choose Settings, Camera, ' +
           'Formats, Most Compatible, or share the photo as a JPEG.';
@@ -161,6 +200,9 @@
    */
   function createQueue(options) {
     var send = options.send;
+    // Videos go through their own sender (chunked upload, then processing).
+    var sendVideo = options.sendVideo || null;
+    var video = sendVideo ? options.video || { maxBytes: 500 * 1024 * 1024 } : null;
     var concurrency = options.concurrency || CONCURRENCY;
     var maxBytes = options.maxBytes;
     var onChange = options.onChange || function () {};
@@ -208,11 +250,14 @@
       });
       Array.prototype.forEach.call(files, function (file) {
         var key = keyOf(file);
-        var problem = seen[key] ? 'duplicate' : checkFile(file, maxBytes);
+        var problem = seen[key] ? 'duplicate' : checkFile(file, maxBytes, video);
         seen[key] = true;
         var item = {
           id: nextId,
           file: file,
+          kind: video && isVideoFile(file) ? 'video' : 'photo',
+          // Video only: 'waiting' (in line on the server) or 'processing'.
+          phase: null,
           name: file.name || 'photo',
           size: file.size || 0,
           loaded: 0,
@@ -245,10 +290,22 @@
       if (!running) {
         return;
       }
-      var slots = concurrency - active().length;
+      // A video being processed on the server does not hold a sending slot.
+      var slots = concurrency - active().filter(function (it) {
+        return !(it.kind === 'video' && it.state === 'processing');
+      }).length;
       var queued = items.filter(function (it) { return it.state === 'queued'; });
-      for (var i = 0; i < queued.length && slots > 0; i += 1, slots -= 1) {
+      // One video sends at a time (they are large); photos keep flowing beside it.
+      var videoBusy = items.some(function (it) { return it.kind === 'video' && it.state === 'uploading'; });
+      for (var i = 0; i < queued.length && slots > 0; i += 1) {
+        if (queued[i].kind === 'video') {
+          if (videoBusy) {
+            continue;
+          }
+          videoBusy = true;
+        }
         startOne(queued[i]);
+        slots -= 1;
       }
       if (active().length === 0 && queued.length === 0) {
         finish();
@@ -256,12 +313,21 @@
     }
 
     function startOne(item) {
-      set(item, { state: 'uploading', loaded: 0, code: null, serverMessage: '' });
-      var handle = send(item, function (loaded, total) {
+      set(item, { state: 'uploading', loaded: 0, code: null, serverMessage: '', phase: null });
+      var sender = item.kind === 'video' ? sendVideo : send;
+      var handle = sender(item, function (loaded, total) {
         if (item.state !== 'uploading') {
           return;
         }
         set(item, { loaded: Math.min(loaded, item.size), state: total && loaded >= total ? 'processing' : 'uploading' });
+        if (item.state === 'processing') {
+          // The bytes are in: a video may now be processed alongside the next one.
+          pump();
+        }
+      }, function (phase) {
+        if (item.state === 'processing' && item.phase !== phase) {
+          set(item, { phase: phase });
+        }
       });
       item.abort = handle.abort;
       handle.promise.then(function (res) {
@@ -343,6 +409,20 @@
       return true;
     }
 
+    /** Fail a waiting item for a reason found after it was added (a video's length). */
+    function reject(id, code) {
+      var item = find(id);
+      if (!item || item.state !== 'queued') {
+        return false;
+      }
+      item.retryable = false;
+      set(item, { state: 'failed', code: code, serverMessage: '' });
+      if (running) {
+        pump();
+      }
+      return true;
+    }
+
     function cancelAll() {
       items.slice().forEach(function (it) {
         if (it.state === 'queued' || it.state === 'uploading') {
@@ -368,9 +448,12 @@
 
     function counts() {
       var c = { total: items.length, queued: 0, uploading: 0, processing: 0, done: 0, failed: 0, cancelled: 0, skipped: 0,
-        awaitingGuardian: 0, rejected: 0 };
+        awaitingGuardian: 0, rejected: 0, doneVideos: 0 };
       items.forEach(function (it) {
         c[it.state] += 1;
+        if (it.state === 'done' && it.kind === 'video') {
+          c.doneVideos += 1;
+        }
         if (it.state === 'failed' && !it.retryable) {
           c.rejected += 1;
         }
@@ -409,6 +492,14 @@
       });
     }
 
+    /** True while leaving the page would lose something (a video processing on the server would not). */
+    function needsPage() {
+      return items.some(function (it) {
+        return it.state === 'uploading' || (running && it.state === 'queued') ||
+          (it.state === 'processing' && it.kind !== 'video');
+      });
+    }
+
     return {
       add: add,
       start: start,
@@ -421,6 +512,8 @@
       counts: counts,
       progress: progress,
       isBusy: isBusy,
+      needsPage: needsPage,
+      reject: reject,
       isRunning: function () { return running; },
       items: function () { return items.slice(); },
     };
@@ -439,14 +532,28 @@
     return parts.join(', ');
   }
 
+  /** "3 photos", "1 video", "2 photos and 1 video". */
+  function itemsText(total, videos) {
+    var v = videos || 0;
+    var p = total - v;
+    if (!v) {
+      return plural(p, 'photo', 'photos');
+    }
+    if (!p) {
+      return plural(v, 'video', 'videos');
+    }
+    return plural(p, 'photo', 'photos') + ' and ' + plural(v, 'video', 'videos');
+  }
+
   /** The end-of-batch summary: what happened and what to do next. */
   function summarize(c, role) {
     var member = role === 'member';
     var lines = [];
+    var what = itemsText(c.done, c.doneVideos);
     if (c.done) {
       lines.push(member
         ? 'They show up for the family once a parent approves them.'
-        : 'New photos are private to parents until you share them.');
+        : (c.doneVideos ? 'New photos and videos are' : 'New photos are') + ' private to parents until you share them.');
     }
     if (c.awaitingGuardian) {
       lines.push(plural(c.awaitingGuardian, 'photo is', 'photos are') +
@@ -463,8 +570,8 @@
       lines.push(plural(c.skipped, 'duplicate was', 'duplicates were') + ' skipped.');
     }
     var headline = member
-      ? plural(c.done, 'photo', 'photos') + ' sent' + (c.failed ? ', ' + c.failed + ' failed' : '')
-      : plural(c.done, 'photo', 'photos') + ' added' + (c.failed ? ', ' + c.failed + ' failed' : '');
+      ? what + ' sent' + (c.failed ? ', ' + c.failed + ' failed' : '')
+      : what + ' added' + (c.failed ? ', ' + c.failed + ' failed' : '');
     return {
       headline: headline,
       lines: lines,
@@ -491,6 +598,11 @@
     if (item.state === 'uploading') {
       return 'Uploading ' + (item.size ? Math.floor((item.loaded / item.size) * 100) : 0) + '%';
     }
+    if (item.state === 'processing' && item.kind === 'video') {
+      return item.phase === 'processing'
+        ? 'Processing (making it play everywhere, removing location). You can leave this page.'
+        : 'Processing (waiting its turn). You can leave this page.';
+    }
     if (item.state === 'processing') {
       return 'Saving (removing location details)';
     }
@@ -498,9 +610,276 @@
       if (role === 'member') {
         return 'Sent for approval';
       }
+      if (item.kind === 'video') {
+        return 'Added (private until you share it)';
+      }
       return item.result && item.result.sharing === 'awaiting_guardian' ? 'Added, sharing awaits a guardian' : 'Added';
     }
     return STATE_LABEL[item.state] || item.state;
+  }
+
+  // Video refusals that will fail the same way on every retry.
+  var VIDEO_FINAL = ['too_long', 'video_too_large', 'unsupported_video'];
+
+  function formBody(fields) {
+    return Object.keys(fields).filter(function (k) {
+      return fields[k] !== undefined && fields[k] !== null && fields[k] !== '';
+    }).map(function (k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(String(fields[k]));
+    }).join('&');
+  }
+
+  /**
+   * Sends one video: start (or resume) an upload session, send each missing
+   * chunk as its own request (a dropped connection retries that chunk, and a
+   * later Retry resumes from the chunks the server already has), finish it,
+   * then poll the processing status until the video is added or fails.
+   *
+   * o.request(method, url, { body, contentType, onProgress }) -> { promise, abort }
+   * resolving to { status, json, toLogin }; injected so tests run in Node.
+   */
+  function createVideoSender(o) {
+    var base = o.url || '/videos/uploads';
+    var jobs = o.jobsUrl || '/videos/jobs';
+    var wait = o.wait || function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+    var pollMs = o.pollMs || VIDEO_POLL_MS;
+    var retries = o.chunkRetries === undefined ? CHUNK_RETRIES : o.chunkRetries;
+    var maxMs = ((o.videoMaxSeconds || 180) + 1) * 1000;
+    var urlenc = 'application/x-www-form-urlencoded';
+
+    return function (item, onProgress, onPhase) {
+      var aborted = false;
+      var current = null;
+      var phase = onPhase || function () {};
+
+      function call(method, url, opts) {
+        if (aborted) {
+          return Promise.resolve({ status: 0, json: null });
+        }
+        current = o.request(method, url, opts || {});
+        return current.promise.then(function (r) {
+          current = null;
+          return r;
+        });
+      }
+
+      function failed(r) {
+        var res = interpretResponse(r.status, r.json, r.toLogin);
+        if (res.code === 'upload_gone') {
+          item.upload = null;
+        }
+        return res;
+      }
+
+      async function run() {
+        if (item.durationPromise) {
+          var d = await item.durationPromise;
+          if (d && d > maxMs) {
+            return { ok: false, code: 'too_long' };
+          }
+          item.durationMs = d || undefined;
+        }
+        var up = null;
+        var r;
+        if (item.upload) {
+          r = await call('GET', base + '/' + item.upload.id);
+          if (r.json && r.json.ok) {
+            up = r.json.upload;
+          } else if (r.status !== 404) {
+            return failed(r);
+          }
+        }
+        if (!up) {
+          r = await call('POST', base, {
+            contentType: urlenc,
+            body: formBody({
+              _csrf: o.csrf,
+              size: item.size,
+              durationMs: item.durationMs,
+              caption: item.fields && item.fields.caption,
+            }),
+          });
+          if (!(r.json && r.json.ok)) {
+            return failed(r);
+          }
+          up = r.json.upload;
+          item.upload = { id: up.id };
+        }
+        var have = {};
+        var sent = 0;
+        up.received.forEach(function (i) {
+          have[i] = true;
+          sent += Math.min(up.chunkBytes, item.size - i * up.chunkBytes);
+        });
+        // Never report "all bytes in" until the server accepted the finish.
+        var report = function (n) { onProgress(Math.min(n, item.size - 1), item.size); };
+        report(sent);
+        for (var i = 0; i < up.chunkCount; i += 1) {
+          if (have[i]) {
+            continue;
+          }
+          var start = i * up.chunkBytes;
+          var end = Math.min(start + up.chunkBytes, item.size);
+          var tries = 0;
+          for (;;) {
+            r = await call('PUT', base + '/' + up.id + '/chunks/' + i, {
+              contentType: 'application/octet-stream',
+              body: item.file.slice(start, end),
+              onProgress: function (loaded) { report(sent + loaded); },
+            });
+            if (aborted) {
+              return { ok: false, code: 'cancelled' };
+            }
+            if (r.json && r.json.ok) {
+              sent += end - start;
+              report(sent);
+              break;
+            }
+            if (r.status === 0 && tries < retries) {
+              // Dropped connection: wait a little, then send this chunk again.
+              tries += 1;
+              await wait(1000 * Math.pow(2, tries - 1));
+              continue;
+            }
+            return failed(r);
+          }
+        }
+        r = await call('POST', base + '/' + up.id + '/complete', { contentType: urlenc, body: formBody({ _csrf: o.csrf }) });
+        if (aborted) {
+          return { ok: false, code: 'cancelled' };
+        }
+        if (!(r.json && r.json.ok)) {
+          if (r.status !== 0 && r.status !== 409) {
+            // The server ended the session (refused or expired): a retry starts fresh.
+            item.upload = null;
+          }
+          return failed(r);
+        }
+        item.upload = null;
+        onProgress(item.size, item.size);
+        phase('waiting');
+        var jobUrl = jobs + '/' + r.json.job.id;
+        var misses = 0;
+        for (;;) {
+          await wait(pollMs);
+          r = await call('GET', jobUrl);
+          if (r.status === 0 && misses < 20) {
+            misses += 1;
+            continue;
+          }
+          if (!(r.json && r.json.ok)) {
+            return failed(r);
+          }
+          misses = 0;
+          var job = r.json.job;
+          if (job.status === 'done') {
+            return { ok: true, photo: job.photo, sharing: job.sharing, message: '' };
+          }
+          if (job.status === 'failed') {
+            return { ok: false, code: job.code || 'processing_failed', serverMessage: job.message || '' };
+          }
+          phase(job.status === 'processing' ? 'processing' : 'waiting');
+        }
+      }
+
+      var promise = run().then(function (res) {
+        if (!res.ok && VIDEO_FINAL.indexOf(res.code) !== -1) {
+          item.retryable = false;
+        }
+        return res;
+      }, function () {
+        return { ok: false, code: 'server_error' };
+      });
+      return {
+        promise: promise,
+        abort: function () {
+          aborted = true;
+          if (current) {
+            current.abort();
+          }
+          if (item.upload) {
+            // Let the server delete the partial file now rather than at expiry.
+            o.request('DELETE', base + '/' + item.upload.id, { contentType: urlenc, body: formBody({ _csrf: o.csrf }) });
+            item.upload = null;
+          }
+        },
+      };
+    };
+  }
+
+  /** How long a picked video is, in ms, read by the browser itself (null if it cannot tell). */
+  function browserDuration(doc, file) {
+    return new Promise(function (resolve) {
+      var v = doc.createElement('video');
+      var url;
+      var settled = false;
+      var done = function (ms) {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (url) {
+          URL.revokeObjectURL(url);
+        }
+        v.removeAttribute('src');
+        resolve(ms);
+      };
+      v.preload = 'metadata';
+      v.muted = true;
+      v.onloadedmetadata = function () {
+        done(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration * 1000) : null);
+      };
+      v.onerror = function () { done(null); };
+      setTimeout(function () { done(null); }, 8000);
+      try {
+        url = URL.createObjectURL(file);
+        v.src = url;
+      } catch {
+        done(null);
+      }
+    });
+  }
+
+  /** Plain XHR for the video sender (upload progress needs XHR, not fetch). */
+  function xhrRequest(csrf) {
+    return function (method, url, opts) {
+      var xhr = new XMLHttpRequest();
+      var promise = new Promise(function (resolve) {
+        xhr.open(method, url);
+        xhr.setRequestHeader('Accept', 'application/json');
+        if (method !== 'GET') {
+          xhr.setRequestHeader('X-CSRF-Token', csrf);
+        }
+        if (opts.contentType) {
+          xhr.setRequestHeader('Content-Type', opts.contentType);
+        }
+        xhr.timeout = 5 * 60 * 1000;
+        if (opts.onProgress && xhr.upload) {
+          xhr.upload.onprogress = function (e) {
+            if (e.lengthComputable) {
+              opts.onProgress(e.loaded);
+            }
+          };
+        }
+        xhr.onload = function () {
+          var json = null;
+          if (/json/.test(xhr.getResponseHeader('Content-Type') || '')) {
+            try {
+              json = JSON.parse(xhr.responseText);
+            } catch {
+              json = null;
+            }
+          }
+          var toLogin = /\/login(\?|$)/.test(String(xhr.responseURL || '').replace(/#.*$/, ''));
+          resolve({ status: xhr.status, json: json, toLogin: toLogin });
+        };
+        xhr.onerror = function () { resolve({ status: 0, json: null }); };
+        xhr.ontimeout = function () { resolve({ status: 0, json: null }); };
+        xhr.onabort = function () { resolve({ status: 0, json: null }); };
+        xhr.send(opts.body || null);
+      });
+      return { promise: promise, abort: function () { xhr.abort(); } };
+    };
   }
 
   // --- Browser wiring ---
@@ -580,6 +959,14 @@
     var maxBytes = Number(form.getAttribute('data-max-bytes')) || 15 * 1024 * 1024;
     var perHour = Number(form.getAttribute('data-per-hour')) || 120;
     var labelOne = submitBtn.getAttribute('data-label-one') || 'Upload';
+    var videoUrl = form.getAttribute('data-video-url');
+    var videoOpts = videoUrl
+      ? {
+        maxBytes: Number(form.getAttribute('data-video-max-bytes')) || 500 * 1024 * 1024,
+        maxSeconds: Number(form.getAttribute('data-video-max-seconds')) || 180,
+        perHour: Number(form.getAttribute('data-video-per-hour')) || 20,
+      }
+      : null;
     var rows = {};
     var previews = 0;
     var MAX_PREVIEWS = 24; // shortcut: decoding hundreds of phone photos at once can exhaust a phone's memory.
@@ -591,11 +978,26 @@
     form.classList.add('upload-enhanced');
     var pickLabel = q('[data-upload-pick-label]');
     if (pickLabel) {
-      pickLabel.textContent = 'Choose photos';
+      pickLabel.textContent = videoOpts ? 'Choose photos or videos' : 'Choose photos';
     }
     var dropText = q('[data-upload-drop-text]');
     if (dropText) {
       dropText.hidden = false;
+      if (videoOpts) {
+        dropText.textContent = 'or drag photos and videos here';
+      }
+    }
+    if (videoOpts) {
+      input.setAttribute('accept', input.getAttribute('accept') + ',video/mp4,video/quicktime,.mp4,.mov,.m4v');
+      var videoHint = q('[data-upload-video-hint]');
+      var noVideoHint = q('[data-upload-novideo-hint]');
+      if (videoHint) {
+        videoHint.hidden = false;
+      }
+      if (noVideoHint) {
+        noVideoHint.hidden = true;
+      }
+      list.setAttribute('aria-label', 'Photos and videos to upload');
     }
     var multiHint = q('[data-upload-multi-hint]');
     if (multiHint) {
@@ -618,8 +1020,13 @@
       }
     }
 
+    var csrf = csrfInput ? csrfInput.value : '';
     var queue = createQueue({
-      send: xhrSend(form.getAttribute('action'), csrfInput ? csrfInput.value : ''),
+      send: xhrSend(form.getAttribute('action'), csrf),
+      sendVideo: videoOpts
+        ? createVideoSender({ url: videoUrl, csrf: csrf, request: xhrRequest(csrf), videoMaxSeconds: videoOpts.maxSeconds })
+        : null,
+      video: videoOpts,
       maxBytes: maxBytes,
       onChange: function (item) {
         renderRow(item);
@@ -643,7 +1050,14 @@
     });
 
     function reason(item) {
-      return messageFor(item.code, { maxBytes: maxBytes, perHour: perHour, serverMessage: item.serverMessage });
+      return messageFor(item.code, {
+        maxBytes: maxBytes,
+        perHour: perHour,
+        serverMessage: item.serverMessage,
+        videoMaxBytes: videoOpts && videoOpts.maxBytes,
+        videoMaxSeconds: videoOpts && videoOpts.maxSeconds,
+        videoPerHour: videoOpts && videoOpts.perHour,
+      });
     }
 
     function el(tag, cls, text) {
@@ -693,7 +1107,10 @@
         }
         var main = el('div', 'upload-item-main');
         var name = el('span', 'upload-item-name', item.name);
-        var size = el('span', 'upload-item-size muted', formatBytes(item.size));
+        var size = el('span', 'upload-item-size muted', formatBytes(item.size) + (item.kind === 'video' ? ', video' : ''));
+        if (item.kind === 'video' && thumb.className.indexOf('blank') !== -1) {
+          thumb.classList.add('upload-item-thumb-video');
+        }
         var state = el('span', 'upload-item-state');
         var icon = el('span', 'upload-item-icon');
         icon.setAttribute('aria-hidden', 'true');
@@ -797,7 +1214,7 @@
         bar.value = 100;
         overall.textContent = c.total ? 'Finished.' : '';
       }
-      keepOpen.hidden = !busy;
+      keepOpen.hidden = !queue.needsPage();
       if (busy) {
         summaryBox.hidden = true;
       }
@@ -816,7 +1233,8 @@
       if (busy) {
         submitBtn.textContent = 'Uploading...';
       } else if (c.queued > 1) {
-        submitBtn.textContent = (role === 'member' ? 'Send ' : 'Upload ') + c.queued + ' photos' +
+        var queuedVideos = queue.items().filter(function (it) { return it.state === 'queued' && it.kind === 'video'; }).length;
+        submitBtn.textContent = (role === 'member' ? 'Send ' : 'Upload ') + itemsText(c.queued, queuedVideos) +
           (role === 'member' ? ' to parents' : '');
       } else {
         submitBtn.textContent = labelOne;
@@ -851,8 +1269,22 @@
       var added = queue.add(files, fields());
       var bad = added.filter(function (it) { return it.state === 'failed'; }).length;
       var ok = added.length - bad - added.filter(function (it) { return it.state === 'skipped'; }).length;
+      var okVideos = 0;
+      added.forEach(function (it) {
+        if (it.kind === 'video' && it.state === 'queued') {
+          okVideos += 1;
+          // Ask the browser how long the clip is; over the limit fails at once.
+          it.durationPromise = browserDuration(doc, it.file).then(function (ms) {
+            if (ms && ms > (videoOpts.maxSeconds + 1) * 1000) {
+              queue.reject(it.id, 'too_long');
+              announce(it.name + ' cannot be uploaded. ' + reason(it));
+            }
+            return ms;
+          });
+        }
+      });
       renderOverall();
-      var msg = plural(ok, 'photo', 'photos') + ' added to the list.';
+      var msg = itemsText(ok, okVideos) + ' added to the list.';
       if (bad) {
         msg += ' ' + plural(bad, 'file', 'files') + ' cannot be uploaded; the list says why.';
       }
@@ -932,7 +1364,7 @@
     });
 
     window.addEventListener('beforeunload', function (e) {
-      if (queue.isBusy()) {
+      if (queue.needsPage()) {
         e.preventDefault();
         e.returnValue = '';
       }
@@ -941,6 +1373,8 @@
 
   return {
     checkFile: checkFile,
+    createVideoSender: createVideoSender,
+    itemsText: itemsText,
     messageFor: messageFor,
     interpretResponse: interpretResponse,
     createQueue: createQueue,
