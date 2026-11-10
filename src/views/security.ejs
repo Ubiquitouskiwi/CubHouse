@@ -24,8 +24,13 @@
       <form class="stacked-form" method="post" action="/settings/security/mfa/disable"
         data-confirm="Turn off two-step verification?">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <%- include('partials/autofill-username', { email: user.email }) %>
         <label>Password <input type="password" name="password" autocomplete="current-password" required /></label>
-        <label>Current code <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required /></label>
+        <label>
+          6-digit code from your authenticator app
+          <input type="text" name="code" inputmode="numeric" pattern="[0-9 ]*" autocomplete="one-time-code"
+            autocapitalize="off" spellcheck="false" maxlength="7" required />
+        </label>
         <button type="submit" class="ghost-button">Turn off</button>
       </form>
     <% } else { %>
@@ -57,8 +62,9 @@
     <form class="stacked-form" method="post" action="/settings/security/mfa/enable">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
       <label>
-        Enter the 6-digit code it shows
-        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+        6-digit code from your authenticator app
+        <input type="text" name="code" inputmode="numeric" pattern="[0-9 ]*" autocomplete="one-time-code"
+          autocapitalize="off" spellcheck="false" maxlength="7" required />
       </label>
       <button type="submit" class="primary-button">Turn on two-step verification</button>
     </form>

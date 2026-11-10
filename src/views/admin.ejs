@@ -354,7 +354,9 @@
   <form method="post" action="/admin/archive/erase" class="stacked-form"
     data-confirm="Request permanent erasure of every photo? The other guardian must approve.">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-    <label>Type ERASE to request erasing everything <input type="text" name="confirm" autocomplete="off" /></label>
+    <label>Type ERASE to request erasing everything
+      <input type="text" name="confirm" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore
+        data-form-type="other" /></label>
     <button type="submit" class="btn-danger">Request archive erasure</button>
   </form>
 </section>
