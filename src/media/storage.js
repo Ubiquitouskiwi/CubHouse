@@ -18,7 +18,10 @@ const path = require('path');
  * authorization check, never by handing a browser a bucket URL.
  */
 
-const KEY_RE = /^photos\/[0-9a-f-]{36}\/(thumb|display|full)$/;
+// Photo variants, plus numbered encrypted segments of a video (v000000...).
+// Videos keep the photos/ prefix so backups and the bucket's version-expiry
+// rule (deploy/SPACES.md) cover them with no change.
+const KEY_RE = /^photos\/[0-9a-f-]{36}\/(thumb|display|full|v\d{6})$/;
 
 function assertKey(key) {
   if (!KEY_RE.test(key)) {
