@@ -91,6 +91,12 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'Upload limit reached for now. Please try again later.',
     }),
+    reauthLimiter: make('reauth', {
+      windowMs: 15 * 60 * 1000,
+      limit: 10,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'Too many confirmation attempts. Please wait and try again.',
+    }),
     // Invite codes sent by email, per guardian (counted when the guardian
     // asks, including requests still waiting for approval).
     inviteEmailLimiter: make('invite-email', {
@@ -98,12 +104,6 @@ function createRateLimiters({ storeFactory } = {}) {
       limit: INVITE_EMAILS_PER_HOUR,
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'You have sent a lot of invite emails just now. Please wait an hour and try again.',
-    }),
-    reauthLimiter: make('reauth', {
-      windowMs: 15 * 60 * 1000,
-      limit: 10,
-      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
-      message: 'Too many confirmation attempts. Please wait and try again.',
     }),
   };
 }
