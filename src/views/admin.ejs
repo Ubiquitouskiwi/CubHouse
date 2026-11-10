@@ -29,6 +29,12 @@
       <% pending.forEach(function (r) { %>
         <li class="request">
           <p><strong><%= r.summary %></strong></p>
+          <% if (r.type === 'accessCode.create' && r.payload && r.payload.intendedEmail) { %>
+            <p>
+              Invite code for <strong><%= r.payload.intendedEmail %></strong><% if (r.payload.sendEmail) { %>.
+              It is emailed to them as soon as the code is created.<% } %>
+            </p>
+          <% } %>
           <p class="muted">
             Asked by <%= r.requestedByName %> on <%= r.createdAt.replace('T', ' ').slice(0, 16) %>.
             <% if (r.executeAfter) { %>Takes effect after <%= r.executeAfter.replace('T', ' ').slice(0, 16) %> unless cancelled.<% } %>
@@ -59,8 +65,38 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
     <label>
       Their email (recommended)
-      <input type="email" name="intendedEmail" placeholder="grandma@example.com" />
+      <input type="email" name="intendedEmail" maxlength="254" placeholder="grandma@example.com" />
     </label>
+    <fieldset class="audience-fieldset">
+      <legend>Email it to them (optional)</legend>
+      <% if (emailAvailable) { %>
+        <label class="checkbox-row">
+          <input type="checkbox" name="sendEmail" aria-describedby="invite-email-help" />
+          <span>Email the code to the address above</span>
+        </label>
+        <label>
+          Their first name, for the greeting (optional)
+          <input type="text" name="firstName" maxlength="60" autocomplete="off" />
+        </label>
+        <p class="muted" id="invite-email-help">
+          The email goes out once the code is created:
+          <% if (guardianCount > 1) { %>
+            after the other guardian approves it.
+          <% } else if (soloDelayHours > 0) { %>
+            after the <%= soloDelayHours %>-hour safety delay.
+          <% } else { %>
+            right away.
+          <% } %>
+          If the request is declined, cancelled or expires, nothing is sent.
+          You will still see the code here.
+        </p>
+      <% } else { %>
+        <p class="muted" id="invite-email-help">
+          Email is not set up on this server, so codes cannot be emailed.
+          The code is shown here once it is created; share it with them yourself.
+        </p>
+      <% } %>
+    </fieldset>
     <label>
       Note (e.g. "for Grandma")
       <input type="text" name="note" maxlength="200" />
@@ -100,6 +136,15 @@
               </td>
               <td><%= ac.expiresAt ? ac.expiresAt.replace('T', ' ').slice(0, 16) : '' %></td>
               <td>
+                <% if (ac.status === 'open' && emailAvailable) { %>
+                  <form method="post" action="/admin/access-codes/<%= encodeURIComponent(ac.code) %>/email" class="inline-form">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+                    <% if (!ac.intendedEmail) { %>
+                      <input type="email" name="email" maxlength="254" required placeholder="their@email" aria-label="Email address to send this code to" />
+                    <% } %>
+                    <button type="submit" class="link-button">Send by email</button>
+                  </form>
+                <% } %>
                 <% if (ac.status === 'open') { %>
                   <form method="post" action="/admin/access-codes/<%= encodeURIComponent(ac.code) %>/revoke" class="inline-form">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />

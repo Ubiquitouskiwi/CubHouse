@@ -162,6 +162,29 @@ Protected changes asked for by either guardian. See [Two-guardian approval](two-
 Creating a code needs the other guardian. Once approved, the code appears in **Invite codes**.
 Give it to the person by phone or in person. It works once and expires after 72 hours.
 
+#### Send the invite by email
+
+To have the site email the code for you, fill in **Their email**, then under **Email it to them**
+tick **Email the code to the address above**. You can add their first name for the greeting.
+
+The email goes out once the code is created: after the other guardian approves, or with one
+guardian, after the 24-hour safety delay. If the request is declined, cancelled or expires, nothing
+is sent. The other guardian sees **Invite code for** the address in their approval list. An emailed
+code is always bound to that address.
+
+The email says who invited them, shows the code in a large box, and has a **Join** button that opens
+the sign-up page with the code filled in. It also says when the code expires. It never includes
+photos or family details. It loads nothing from the internet, so nobody can tell when it is opened.
+
+![The invite email: the app name on a bear badge, a greeting, the invite code in a large dashed box, a Join button, the expiry and a line saying they can ignore it if unexpected](img/invite-email.png)
+
+To email an open code you already have, select **Send by email** next to it in **Invite codes**. A
+code bound to an email only goes to that address. Each guardian can send up to 10 invite emails an
+hour. Every send is in the audit trail as **invite.emailed**, with the address partly hidden.
+
+If email is not set up on the server, the form says so. The code is still created and shown to you,
+so share it yourself.
+
 ![The Invite a family member form, and the Invite codes table showing two open codes (hidden here), an expired code and a revoked code](img/admin-invites.png)
 
 The **Invite codes** table shows each code's note, email, group, status (**Open**, **Used by**

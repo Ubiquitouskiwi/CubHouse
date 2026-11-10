@@ -83,4 +83,19 @@
       });
     });
   }
+
+  // Invite email link: /register#code=INVITE-XXXX-XXXX-XXXX. The fragment is
+  // never sent to the server (no access logs, no Referer). Prefill only: the
+  // server still validates the code. The fragment is then removed from the
+  // address bar and history.
+  var codeField = document.querySelector('form[action="/register"] input[name="accessCode"]');
+  var codeMatch = /^#code=(INVITE-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/.exec(window.location.hash || '');
+  if (codeField && codeMatch) {
+    if (!codeField.value) {
+      codeField.value = codeMatch[1];
+    }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }
 })();

@@ -6,6 +6,7 @@ const { PHOTO_AUDIENCE, portalCapabilities, isValidPhotoAudience, ROLE_LABELS, R
 const { audit, verifyChain } = require('../audit');
 const { buildZip } = require('../services/zip');
 const { str, strList, validateEmail } = require('../validation');
+const { maskEmail } = require('../services/support');
 
 /**
  * Guardian controls. Dev (development only) may VIEW a reduced dashboard but
@@ -17,7 +18,7 @@ const { str, strList, validateEmail } = require('../validation');
  *   codes, add someone to a group, change a role, erase the archive.
  */
 module.exports = function adminRoutes(ctx) {
-  const { store, config, governance, actions, media, notifier, requireStepUp } = ctx;
+  const { store, config, governance, actions, media, notifier, requireStepUp, limiters } = ctx;
   const router = createRouter();
 
   function flashOutcome(req, outcome, pendingMessage) {
@@ -91,12 +92,19 @@ module.exports = function adminRoutes(ctx) {
       reports: reportsWithComment,
       currentUserId: req.user.id,
       codeTtlHours: Math.round(config.security.accessCodeTtlMs / 3600000),
+      emailAvailable: notifier.emailAvailable(),
+      guardianCount: users.filter((u) => u.role === ROLES.PARENT && !u.disabled).length,
+      soloDelayHours: Math.round(config.governance.soloDelayMs / 3600000),
     });
   });
 
   // --- Invite codes ---
 
-  router.post('/admin/access-codes', requireParent, requireStepUp, async (req, res) => {
+  // Rate-limit only the requests that actually ask for an email.
+  const limitInviteEmails = (req, res, next) =>
+    str(req.body.sendEmail) === 'on' ? limiters.inviteEmailLimiter(req, res, next) : next();
+
+  router.post('/admin/access-codes', requireParent, requireStepUp, limitInviteEmails, async (req, res) => {
     const note = str(req.body.note, { field: 'note', max: 200 });
     const groupId = str(req.body.groupId, { field: 'groupId' }) || null;
     const rawEmail = str(req.body.intendedEmail, { field: 'intendedEmail', max: 254 });
@@ -109,14 +117,73 @@ module.exports = function adminRoutes(ctx) {
       }
       intendedEmail = check.value.toLowerCase();
     }
+    const wantsEmail = str(req.body.sendEmail) === 'on';
+    if (wantsEmail && !intendedEmail) {
+      req.flash('error', 'Add their email address to send them the code.');
+      return res.redirect('/admin');
+    }
+    // Without working email the code is still created and shown here.
+    const sendEmail = wantsEmail && notifier.emailAvailable();
+    const firstName = sendEmail ? str(req.body.firstName, { field: 'firstName', max: 60 }) : '';
+    // The summary lands in the audit trail and guardian emails, so it names
+    // the address only masked; the admin page shows it in full from payload.
+    const summary =
+      `Create an invite code${note ? ` for "${note}"` : ''}` +
+      (sendEmail ? ` and email it to ${maskEmail(intendedEmail)}` : intendedEmail ? ' (bound to one email)' : '');
     const outcome = await governance.requestAction(req, {
       type: 'accessCode.create',
-      payload: { note, groupId, intendedEmail },
-      summary: `Create an invite code${note ? ` for "${note}"` : ''}${intendedEmail ? ' (bound to one email)' : ''}`,
+      payload: { note, groupId, intendedEmail, sendEmail, firstName },
+      summary,
     });
-    flashOutcome(req, outcome, 'Inviting a new member needs the other guardian, so the request is waiting for approval.');
+    flashOutcome(
+      req,
+      outcome,
+      'Inviting a new member needs the other guardian, so the request is waiting for approval.' +
+        (sendEmail ? ' The code will be emailed to them once it is created.' : '')
+    );
+    if (wantsEmail && !sendEmail) {
+      req.flash('error', 'Email is not set up on this server, so the code was not emailed. Share it with them yourself.');
+    }
     return res.redirect('/admin');
   });
+
+  // Email an existing open code. Codes are kept (and shown to guardians)
+  // until used, so this sends the same code the table already shows.
+  router.post(
+    '/admin/access-codes/:code/email',
+    requireParent,
+    requireStepUp,
+    limiters.inviteEmailLimiter,
+    async (req, res) => {
+      const ac = await store.findAccessCode(req.params.code);
+      const open = ac && !ac.usedBy && !ac.revokedAt && !(ac.expiresAt && Date.parse(ac.expiresAt) <= Date.now());
+      if (!open) {
+        req.flash('error', 'Only an open code can be emailed.');
+        return res.redirect('/admin');
+      }
+      let to = ac.intendedEmail;
+      if (!to) {
+        const check = validateEmail(str(req.body.email, { field: 'email', max: 254 }));
+        if (!check.ok) {
+          req.flash('error', check.error);
+          return res.redirect('/admin');
+        }
+        to = check.value.toLowerCase();
+      }
+      const sent = await actions.emailInviteCode(ac, { to, sentBy: req.user.id, req });
+      if (sent.ok) {
+        req.flash('success', `Invite code emailed to ${sent.masked}.`);
+      } else {
+        req.flash(
+          'error',
+          sent.reason === 'not_configured'
+            ? 'Email is not set up on this server. Share the code with them yourself.'
+            : 'The email could not be sent. Try again later, or share the code yourself.'
+        );
+      }
+      return res.redirect('/admin');
+    }
+  );
 
   router.post('/admin/access-codes/:code/revoke', requireParent, async (req, res) => {
     const revoked = await store.revokeAccessCode(req.params.code, req.user.id);

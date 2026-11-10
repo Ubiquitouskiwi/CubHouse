@@ -8,6 +8,16 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Invite codes can be emailed. On **Invite a family member**, tick **Email the code to the address
+  above** (optionally with a first name). The email goes out when the code is created: on the other
+  guardian's approval, or after the solo safety delay. Nothing is sent if the request is declined,
+  cancelled or expires. Open codes also get a **Send by email** action. The email is HTML plus plain
+  text in the site's palette, with light and dark modes, and it loads nothing remote. The Join link
+  carries the code in the URL fragment, so it stays out of server logs; the sign-up page only
+  prefills it and validation is unchanged. Sends are rate-limited per guardian (10 an hour) and
+  audited as `invite.emailed` with a masked address, never the code. Without working email the
+  form says so and the code is still shown.
+
 - Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
   status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
   photo and for all, an end summary with a link to the new photos, and a warning before leaving
