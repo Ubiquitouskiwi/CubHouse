@@ -20,12 +20,17 @@ const {
 } = require('../permissions');
 const { newTraceToken, renderDownload, readTraceToken, shortRef } = require('../phototrace');
 const { UploadRejected } = require('../media/pipeline');
+const { sniffVideo, SNIFF_BYTES } = require('../media/sniff');
 const { truncateIp, clientIp } = require('../security/clientInfo');
 const { safeReturnPath } = require('../security/sessionGuard');
 const { audit } = require('../audit');
 const { str, strList, validateCaption } = require('../validation');
 
 const UPLOAD_PATHS = ['/photos/upload', '/photos/trace'];
+
+// Shown where a download button would be, and when a video download is asked for.
+const VIDEO_NO_DOWNLOAD =
+  'Videos stay snug inside Cubhouse for now, to keep them private. Downloads may come later.';
 
 /**
  * The bulk uploader on Home sends each file with `Accept: application/json`
@@ -244,6 +249,15 @@ function photoRoutes(ctx) {
     if (!captionCheck.ok) {
       return fail(400, 'bad_caption', captionCheck.error);
     }
+    // A video sent to the photo route (the no-JavaScript form): point the
+    // person at the uploader, which sends videos in chunks.
+    if (sniffVideo(file.buffer.subarray(0, SNIFF_BYTES))) {
+      return fail(
+        415,
+        'video',
+        'Videos are added with the uploader on Home, which needs JavaScript turned on in your browser.'
+      );
+    }
 
     let ingested;
     try {
@@ -395,6 +409,7 @@ function photoRoutes(ctx) {
       canComment: canComment(viewer, photo),
       canReact: canReact(viewer, photo),
       canDeleteComment: (c) => !c.deletedAt && canDeleteComment(viewer, c),
+      videoNoDownload: VIDEO_NO_DOWNLOAD,
     });
   });
 
@@ -406,6 +421,11 @@ function photoRoutes(ctx) {
     const photo = await store.findPhotoById(req.params.id);
     if (!photo || !canViewPhoto(viewer, photo)) {
       return notFound(res);
+    }
+    // Refused on the server, not just hidden in the page: no video bytes ever
+    // leave through a download, for anyone (phase 1).
+    if (photo.kind === 'video') {
+      return res.status(403).render('error', { title: 'Videos stay here', message: VIDEO_NO_DOWNLOAD });
     }
     const cap = photoCapabilities(viewer, photo);
     if (!cap.download) {
@@ -746,3 +766,4 @@ function photoRoutes(ctx) {
 
 module.exports = photoRoutes;
 module.exports.createUploadParser = createUploadParser;
+module.exports.VIDEO_NO_DOWNLOAD = VIDEO_NO_DOWNLOAD;

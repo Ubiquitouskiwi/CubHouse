@@ -45,7 +45,14 @@ const SECTIONS = Object.freeze([
   },
   { name: 'downloads', label: 'Photo downloads', method: 'GET', match: (p) => PHOTO_DOWNLOAD.test(p) },
   { name: 'photos', label: 'Browsing photos', method: 'GET', match: (p) => p === '/photos' || ONE_PHOTO.test(p) },
-  { name: 'uploads', label: 'Uploading photos', method: 'POST', match: (p) => p === '/photos/upload' },
+  // One count per photo, and one per video (starting its upload; the chunks
+  // that follow are PUTs and are not counted).
+  {
+    name: 'uploads',
+    label: 'Uploading photos and videos',
+    method: 'POST',
+    match: (p) => p === '/photos/upload' || p === '/videos/uploads',
+  },
   { name: 'comments', label: 'Comments and reactions', method: 'POST', match: (p) => PHOTO_SOCIAL.test(p) },
   { name: 'albums', label: 'Albums', method: 'ANY', match: (p) => under(p, '/albums') },
   { name: 'settings', label: 'Settings', method: 'GET', match: (p) => under(p, '/settings') },

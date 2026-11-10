@@ -12,7 +12,10 @@
  *   addPhoto()      ingests a generated JPEG through the real media pipeline.
  */
 
+const fs = require('node:fs');
 const http = require('node:http');
+const os = require('node:os');
+const path = require('node:path');
 const { makeStore } = require('./storeFactory');
 const { buildApp } = require('../src/server');
 const { hashPassword } = require('../src/auth');
@@ -43,7 +46,15 @@ async function startApp({ store: givenStore, ...options } = {}) {
   const store = givenStore || (await makeStore());
   const mediaStorage = options.mediaStorage || memoryMediaStorage();
   const notifier = options.notifier || createNotifier({ transport: 'memory' });
-  const app = await buildApp(store, { mediaStorage, notifier, memoryRateLimits: true, ...options });
+  // Video upload/transcode scratch in a private temp dir, never the repo.
+  const videoWorkDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cubhouse-video-'));
+  const app = await buildApp(store, {
+    mediaStorage,
+    notifier,
+    memoryRateLimits: true,
+    ...options,
+    video: { workDir: videoWorkDir, ...(options.video || {}) },
+  });
   const server = await new Promise((resolve) => {
     const s = app.listen(0, '127.0.0.1', () => resolve(s));
   });
@@ -55,7 +66,9 @@ async function startApp({ store: givenStore, ...options } = {}) {
     mediaStorage,
     notifier,
     services: app.locals.services,
-    close: () => new Promise((r) => server.close(r)),
+    videoWorkDir,
+    close: () =>
+      new Promise((r) => server.close(r)).then(() => fs.rmSync(videoWorkDir, { recursive: true, force: true })),
     client: () => new Client(base),
   };
 }

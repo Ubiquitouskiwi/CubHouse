@@ -397,6 +397,20 @@ module.exports = function adminRoutes(ctx) {
     const entries = [];
     const index = [];
     for (const p of photos) {
+      if (p.kind === 'video') {
+        // shortcut: videos are listed, not included (phase 1, downloads off). Including them needs a
+        // streaming zip (with ZIP64 past 4 GB) instead of this in-memory one; do that in phase 2.
+        index.push({
+          kind: 'video',
+          included: false,
+          caption: p.caption,
+          createdAt: p.createdAt,
+          durationSeconds: Math.round(((p.video && p.video.durationMs) || 0) / 1000),
+          publishedBy: p.publishedBy,
+          uploadedBy: p.uploadedByName,
+        });
+        continue;
+      }
       const bytes = await media.read(p, 'full');
       if (!bytes) {
         continue;
@@ -406,7 +420,8 @@ module.exports = function adminRoutes(ctx) {
       index.push({ file: name, caption: p.caption, createdAt: p.createdAt, publishedBy: p.publishedBy, uploadedBy: p.uploadedByName });
     }
     entries.push({ name: 'index.json', data: JSON.stringify({ exportedAt: new Date().toISOString(), photos: index }, null, 2) });
-    await audit(store, req, 'archive.exported', { details: { photos: index.length } });
+    const videosListed = index.filter((e) => e.kind === 'video').length;
+    await audit(store, req, 'archive.exported', { details: { photos: index.length - videosListed, videosListed } });
     await notifier.notifyGuardians(store, {
       subject: 'The photo archive was exported',
       text: `${req.user.displayName} downloaded a full export of the photo archive.`,

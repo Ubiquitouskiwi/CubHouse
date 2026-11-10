@@ -171,12 +171,13 @@ module.exports = function accountRoutes(ctx) {
 
   router.post('/settings/export', requireAuth, async (req, res) => {
     const user = req.user;
-    const [comments, reactions, albums, uploads, downloads] = await Promise.all([
+    const [comments, reactions, albums, uploads, downloads, videoJobs] = await Promise.all([
       store.listCommentsByUser(user.id),
       store.listReactionsByUser(user.id),
       store.listAlbumsByOwner(user.id),
       store.listPhotosByUploader(user.id),
       store.listDownloadsByUser(user.id),
+      store.listVideoJobsByOwnerSince(user.id, new Date(0).toISOString()),
     ]);
     const data = {
       exportedAt: new Date().toISOString(),
@@ -199,7 +200,16 @@ module.exports = function accountRoutes(ctx) {
       })),
       reactions: reactions.map((r) => ({ photoId: r.photoId, emoji: r.emoji, createdAt: r.createdAt })),
       albums: albums.map((a) => ({ name: a.name, photoIds: a.photoIds, createdAt: a.createdAt })),
-      contributions: uploads.map((p) => ({ photoId: p.id, caption: p.caption, createdAt: p.createdAt })),
+      contributions: uploads.map((p) => ({
+        photoId: p.id,
+        kind: p.kind || 'photo',
+        caption: p.caption,
+        createdAt: p.createdAt,
+      })),
+      // Videos still being processed, or that could not be (kept 7 days).
+      videoUploads: videoJobs
+        .filter((j) => j.status !== 'done')
+        .map((j) => ({ caption: j.caption, status: j.status, reason: j.reason, createdAt: j.createdAt })),
       downloads: downloads.map((d) => ({ photoId: d.photoId, downloadedAt: d.downloadedAt })),
     };
     await audit(store, req, 'account.exported', { targetType: 'user', targetId: user.id });
