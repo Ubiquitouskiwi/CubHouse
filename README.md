@@ -13,7 +13,7 @@ Each deployment can show its own site name: set `APP_NAME` (it defaults to "Cubh
 [![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
 [![Secret scan](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/OWNER/REPO/badge)](https://scorecard.dev/viewer/?uri=github.com/OWNER/REPO)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/UbiquitousKiwi/CubHouse/badge)](https://scorecard.dev/viewer/?uri=github.com/OWNER/REPO)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 ![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange.svg)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)
