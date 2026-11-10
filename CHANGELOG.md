@@ -8,6 +8,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- `APP_TIME_ZONE` (an IANA zone such as `America/New_York`): the invite email now gives the code's
+  expiry in the family's time zone with the zone named, for example "Fri, Nov 13, 2026, 4:46 PM
+  EST", instead of UTC. Default UTC; an unknown zone falls back to UTC.
 - Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
   status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
   photo and for all, an end summary with a link to the new photos, and a warning before leaving

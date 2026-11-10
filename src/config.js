@@ -25,6 +25,18 @@ const num = (value, fallback) => {
 };
 const bool = (value, fallback) =>
   value === undefined || value === '' ? fallback : value === 'true';
+// An IANA zone name Intl accepts (e.g. America/New_York), or null.
+const validTimeZone = (value) => {
+  if (!value || typeof value !== 'string' || value.length > 64) {
+    return null;
+  }
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return value;
+  } catch {
+    return null;
+  }
+};
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -43,6 +55,10 @@ const config = {
     slug: /^[a-z0-9-]{1,40}$/.test(env.APP_SLUG || '') ? env.APP_SLUG : 'family-photos',
     // One line shown in every page footer.
     footerText: env.APP_FOOTER_TEXT || 'Our little family den. Please keep access codes and photos between us.',
+    // IANA time zone for times written into emails (an email cannot know the
+    // reader's zone), e.g. America/New_York. Anything Intl does not accept
+    // falls back to UTC.
+    timeZone: validTimeZone(env.APP_TIME_ZONE) || 'UTC',
   },
   isProduction,
   isTest,
