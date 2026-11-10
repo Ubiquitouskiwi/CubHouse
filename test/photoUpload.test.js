@@ -138,3 +138,117 @@ test('a parent upload with a family-wide profile is governed like any widening',
   assert.equal(photo.audienceType, 'parents');
   assert.equal((await env.store.listGovernanceRequests({ status: 'pending' })).length, 1);
 });
+
+// --- JSON answers for the bulk uploader (Accept: application/json) ---
+
+const JSON_ACCEPT = { headers: { accept: 'application/json' } };
+const parse = (res) => JSON.parse(res.body);
+
+test('json: a guardian upload answers 201 with the new photo and its link', async (t) => {
+  const { env, parent } = await setup(t);
+  const res = await parent.postMultipart('/photos/upload', {}, { buffer: await plainJpeg() }, JSON_ACCEPT);
+  assert.equal(res.status, 201);
+  const body = parse(res);
+  const [photo] = await env.store.listPhotos();
+  assert.deepEqual(body.photo, { id: photo.id, pending: false, url: `/photos/${photo.id}` });
+  assert.equal(body.sharing, 'private');
+  // No flash is queued for a page the uploader never loads.
+  assert.doesNotMatch((await parent.get('/home')).body, /Photo uploaded\./);
+});
+
+test('json: a family member upload is pending and gets no link to it', async (t) => {
+  const { member } = await setup(t);
+  const res = await member.postMultipart('/photos/upload', {}, { buffer: await plainJpeg() }, JSON_ACCEPT);
+  assert.equal(res.status, 201);
+  const body = parse(res);
+  assert.equal(body.photo.pending, true);
+  assert.equal(body.photo.url, null);
+  assert.equal(body.sharing, 'awaiting_approval');
+});
+
+test('json: rejected files come back with a code and a plain message, and create nothing', async (t) => {
+  const { env, parent } = await setup(t);
+  let res = await parent.postMultipart('/photos/upload', {}, { buffer: Buffer.from('not an image') }, JSON_ACCEPT);
+  assert.equal(res.status, 422);
+  assert.equal(parse(res).error.code, 'unreadable');
+  assert.match(parse(res).error.message, /could not be read/);
+
+  const gif = await sharp({ create: { width: 10, height: 10, channels: 3, background: '#f00' } }).gif().toBuffer();
+  res = await parent.postMultipart('/photos/upload', {}, { buffer: gif }, JSON_ACCEPT);
+  assert.equal(parse(res).error.code, 'unsupported_type');
+
+  res = await parent.postMultipart('/photos/upload', {}, null, JSON_ACCEPT);
+  assert.equal(res.status, 400);
+  assert.equal(parse(res).error.code, 'no_file');
+
+  const saved = config.uploads.maxBytes;
+  config.uploads.maxBytes = 1000;
+  t.after(() => {
+    config.uploads.maxBytes = saved;
+  });
+  res = await parent.postMultipart('/photos/upload', {}, { buffer: await plainJpeg({ width: 1600, height: 1200 }) }, JSON_ACCEPT);
+  assert.equal(res.status, 413);
+  assert.equal(parse(res).error.code, 'too_large');
+  assert.equal((await env.store.listPhotos()).length, 0);
+});
+
+test('json: a bad CSRF token is still refused, with the "expired" code', async (t) => {
+  const { env, parent } = await setup(t);
+  const res = await parent.postMultipart(
+    '/photos/upload',
+    { _csrf: 'forged' },
+    { buffer: await plainJpeg() },
+    { csrf: false, ...JSON_ACCEPT }
+  );
+  assert.equal(res.status, 403);
+  assert.equal(parse(res).error.code, 'expired');
+  assert.equal((await env.store.listPhotos()).length, 0);
+});
+
+test('json: a signed-out upload is refused with the "signed_out" code', async (t) => {
+  const env = await startApp();
+  t.after(env.close);
+  const anon = env.client();
+  const res = await anon.postMultipart('/photos/upload', {}, { buffer: await plainJpeg() }, { csrf: false, ...JSON_ACCEPT });
+  assert.equal(res.status, 401);
+  assert.equal(parse(res).error.code, 'signed_out');
+  assert.equal((await env.store.listPhotos()).length, 0);
+});
+
+test('json: the hourly upload limit still applies and answers "rate_limited"', async (t) => {
+  const { env, parent } = await setup(t);
+  const { UPLOADS_PER_HOUR } = require('../src/security/rateLimiters');
+  await parent.refreshToken();
+  const token = parent.token;
+  let last;
+  // Empty posts count against the limit too; no image needed to reach it.
+  for (let i = 0; i <= UPLOADS_PER_HOUR; i += 1) {
+    last = await parent.postMultipart('/photos/upload', { _csrf: token }, null, { csrf: false, ...JSON_ACCEPT });
+  }
+  assert.equal(last.status, 429);
+  assert.equal(parse(last).error.code, 'rate_limited');
+  assert.equal((await env.store.listPhotos()).length, 0);
+});
+
+test('without JSON, uploads still flash and redirect (no-JavaScript form)', async (t) => {
+  const { parent } = await setup(t);
+  const res = await parent.postMultipart('/photos/upload', {}, { buffer: Buffer.from('nope') });
+  assert.equal(res.status, 302);
+  const page = await parent.get('/home');
+  assert.match(page.body, /could not be read as a photo/);
+});
+
+test('home renders the uploader with its limits for both roles', async (t) => {
+  const { parent, member } = await setup(t);
+  for (const [client, role] of [
+    [parent, 'parent'],
+    [member, 'member'],
+  ]) {
+    const body = (await client.get('/home')).body;
+    assert.match(body, new RegExp(`data-uploader-role="${role}"`));
+    assert.match(body, /data-max-bytes="\d+"/);
+    assert.match(body, /data-per-hour="120"/);
+    assert.match(body, /up to\s+15 MB each/);
+    assert.match(body, /aria-live="polite" data-upload-live/);
+  }
+});

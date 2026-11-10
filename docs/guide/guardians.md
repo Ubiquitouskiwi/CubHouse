@@ -29,21 +29,38 @@ As a guardian, **Home** adds:
 
 ## Upload photos
 
+You can upload one photo or a whole batch at once.
+
 1. Go to **Home**.
-2. In **Add a photo**, select **Choose a photo**. A preview appears.
-3. Add a caption if you like. Skip full names, schools and addresses.
-4. Optional: in **Share using a profile**, pick an [upload profile](#upload-profiles) to share it
+2. In **Add a photo**, select **Choose photos** and pick as many as you like. On a computer you can
+   also drag photos onto the box. Each photo appears in a list.
+3. Add a caption if you like. It goes on every photo in this batch. Skip full names, schools and
+   addresses.
+4. Optional: in **Share using a profile**, pick an [upload profile](#upload-profiles) to share them
    right away. Leave it on **Keep it private for now** to share later.
-5. Select **Upload photo**.
+5. Select **Upload photos**. Keep the page open until it says **Finished**.
 
-![The Add a photo form with Choose a photo, a caption box, and a Share using a profile picker](img/guardian-upload.png)
+![The Add a photo form after a batch: a summary reading 6 photos added, 3 failed with a View the new photos button, and the failed files at the top of the list, each with its reason and Retry or Remove](img/guardian-upload.png)
 
-- JPEG, PNG, WebP or AVIF, up to 15 MB.
+While the batch uploads, each photo shows where it is: **Waiting**, **Uploading** with a percentage,
+**Saving** (the site is removing location details), then **Added** or **Failed** with the reason.
+Three photos go at a time, and one failure does not stop the others.
+
+- Select **Cancel** on a photo, or **Cancel all**, to stop. Once a photo says **Saving** it can no
+  longer be cancelled.
+- When the batch ends, a summary says how many were added and how many failed. Failed photos move
+  to the top of the list. Select **Retry** on one, or **Retry failed** for all of them.
+- Select **View the new photos** to open **Photos**, or **View** on one photo to open it.
+- If you try to leave the page mid-upload, your browser asks you to confirm first.
+- JPEG, PNG, WebP or AVIF, up to 15 MB each, and about 120 photos an hour. Videos and iPhone HEIC
+  files cannot be uploaded yet. Files like these fail straight away, before anything is sent.
 - Every photo is rebuilt from its pixels. GPS location, camera model and every other hidden detail
   are removed. The original file is not kept.
 - New photos are visible to guardians only until you share them.
 - If the profile you picked shares with the whole family or allows downloads, the upload works
-  but the sharing waits for the other guardian.
+  but the sharing waits for the other guardian. Each photo then says **Added, sharing awaits a
+  guardian**, and the other guardian gets one request per photo. For a big batch it is quicker to
+  upload privately, then share them all at once from **Photos**.
 
 ## Approve photos family members send in
 

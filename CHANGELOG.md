@@ -6,6 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
+  status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
+  photo and for all, an end summary with a link to the new photos, and a warning before leaving
+  mid-upload. Videos, HEIC and oversized files fail at once, before upload. With JavaScript off the
+  form still uploads one photo.
+- `POST /photos/upload` answers JSON (`{ ok, photo }` or `{ ok: false, error: { code, message } }`)
+  when asked with `Accept: application/json`. So do the rate limiter and the error handler (codes
+  `rate_limited`, `expired`, `signed_out`, `server_error`). All existing auth, CSRF, rate-limit
+  and file checks are unchanged.
+
 ### Security
 
 - Removing a guardian now needs the other guardian's approval, and nobody can approve their own

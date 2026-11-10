@@ -5,6 +5,7 @@ const { requireAuth, hashPassword, verifyPassword } = require('../auth');
 const { portalCapabilities, photoCapabilities, canViewPhoto, ROLE_LABELS, PHOTO_AUDIENCE } = require('../permissions');
 const { checkNewPassword } = require('../security/passwordPolicy');
 const { audit } = require('../audit');
+const { UPLOADS_PER_HOUR } = require('../security/rateLimiters');
 const {
   THEMES,
   str,
@@ -77,6 +78,7 @@ module.exports = function pageRoutes(ctx) {
       groups,
       profiles,
       audiences: PHOTO_AUDIENCE,
+      uploadLimits: { maxBytes: config.uploads.maxBytes, perHour: UPLOADS_PER_HOUR },
     });
   });
 

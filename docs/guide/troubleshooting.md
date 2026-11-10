@@ -80,6 +80,16 @@ Type it exactly as given, with the email the guardian expected. Otherwise ask fo
 - "That photo is too large. Please keep uploads under 15 MB." Pick a smaller version, or send it
   from your phone's share menu, which often shrinks it.
 - "Animated or multi-page images are not supported." Upload a still photo.
+- "This is a video." Only photos can be uploaded for now.
+- "This is an iPhone HEIC photo." See the first point. Photos picked from the iPhone's photo
+  library are usually converted for you; HEIC files copied to a computer are not.
+- "The connection dropped." Your Wi-Fi or mobile signal cut out. Once it is back, select **Retry**
+  on the photo, or **Retry failed** for all of them.
+- "Upload limit reached for now." Each person can upload about 120 photos an hour. Wait a while,
+  then select **Retry failed**.
+- "You were signed out" or "This page expired." Refresh the page, sign in if asked, and add the
+  photos that did not go through. Photos marked **Added** or **Sent for approval** are already safe.
+- "Already in this list, so it was skipped." You picked the same photo twice. Nothing to do.
 - The **Send to parents** (or **Upload photo**) button stays grey until you choose a photo.
 
 ## On my phone I cannot reach the menu

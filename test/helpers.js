@@ -161,7 +161,7 @@ class Client {
     return this.absorb(res);
   }
 
-  async postMultipart(path, fields = {}, file = null, { csrf = true } = {}) {
+  async postMultipart(path, fields = {}, file = null, { csrf = true, headers = {} } = {}) {
     if (csrf) {
       await this.refreshToken();
     }
@@ -189,6 +189,7 @@ class Client {
         'content-type': `multipart/form-data; boundary=${boundary}`,
         'content-length': body.length,
         cookie: this.cookieHeader(),
+        ...headers,
       },
       body,
     });

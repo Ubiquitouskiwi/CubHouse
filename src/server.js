@@ -196,6 +196,12 @@ async function buildApp(store, options = {}) {
     if (res.headersSent) {
       return res.end();
     }
+    // fetch()/XHR callers (the bulk uploader) get a code instead of a page.
+    if (req.accepts(['html', 'json']) === 'json') {
+      const code =
+        err.code === 'EBADCSRFTOKEN' ? 'expired' : status === 413 ? 'too_large' : status >= 500 ? 'server_error' : 'bad_request';
+      return res.status(status).json({ ok: false, error: { code, message } });
+    }
     res.locals.flash = res.locals.flash || { error: [], success: [] };
     res.locals.currentUser = res.locals.currentUser || null;
     res.locals.can = res.locals.can || portalCapabilities(null);

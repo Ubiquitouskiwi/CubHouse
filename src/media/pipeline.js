@@ -21,11 +21,16 @@ const sharp = require('sharp');
  *      (download only, behind the download permission).
  */
 
+/**
+ * A file the pipeline refuses. `code` is a stable machine-readable reason the
+ * upload page maps to its own wording; `userMessage` is safe to show as is.
+ */
 class UploadRejected extends Error {
-  constructor(message) {
+  constructor(message, code = 'rejected') {
     super(message);
     this.name = 'UploadRejected';
     this.userMessage = message;
+    this.code = code;
   }
 }
 
@@ -39,7 +44,7 @@ const FORMAT_LABEL = 'JPEG, PNG, WebP, or AVIF';
 
 async function sanitizeImage(input, { maxPixels, allowedFormats }) {
   if (!Buffer.isBuffer(input) || input.length === 0) {
-    throw new UploadRejected('Choose an image to upload.');
+    throw new UploadRejected('Choose an image to upload.', 'empty');
   }
   const opts = { limitInputPixels: maxPixels, failOn: 'error', sequentialRead: true };
   let meta;
@@ -48,17 +53,21 @@ async function sanitizeImage(input, { maxPixels, allowedFormats }) {
   } catch {
     throw new UploadRejected(
       `That file could not be read as a photo. Please use ${FORMAT_LABEL}. ` +
-        'On iPhone, choose "Most Compatible" in Settings, Camera, Formats, or share the photo as a JPEG.'
+        'On iPhone, choose "Most Compatible" in Settings, Camera, Formats, or share the photo as a JPEG.',
+      'unreadable'
     );
   }
   if (!allowedFormats.includes(meta.format)) {
-    throw new UploadRejected(`Photos must be ${FORMAT_LABEL}.`);
+    throw new UploadRejected(`Photos must be ${FORMAT_LABEL}.`, 'unsupported_type');
   }
   if ((meta.pages || 1) > 1) {
-    throw new UploadRejected('Animated or multi-page images are not supported. Please upload a still photo.');
+    throw new UploadRejected(
+      'Animated or multi-page images are not supported. Please upload a still photo.',
+      'animated'
+    );
   }
   if (!meta.width || !meta.height || meta.width * meta.height > maxPixels) {
-    throw new UploadRejected('That image is too large in dimensions. Please upload a smaller photo.');
+    throw new UploadRejected('That image is too large in dimensions. Please upload a smaller photo.', 'too_many_pixels');
   }
 
   const variants = {};
@@ -81,7 +90,7 @@ async function sanitizeImage(input, { maxPixels, allowedFormats }) {
       }
     }
   } catch {
-    throw new UploadRejected('That photo could not be processed. Please try a different file.');
+    throw new UploadRejected('That photo could not be processed. Please try a different file.', 'processing_failed');
   }
   return { variants, width, height, sourceFormat: meta.format };
 }
