@@ -1,21 +1,35 @@
 # Required checks before merge. Third-party actions are pinned to commit SHAs
 # (Dependabot keeps them current) so a moved tag cannot run new code here.
+#
+# The job NAMES are what the beta ruleset requires (docs/WORKFLOWS.md). Renaming
+# one silently blocks every pull request, so test/workflows.test.js pins them.
+#
+# promote.yml calls this file (workflow_call) as production's gate.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [beta, production]
   pull_request:
+    branches: [beta, production]
+  workflow_call:
+    secrets:
+      FORBIDDEN_NAMES:
+        required: false
 
 permissions:
   contents: read
 
+# The workflow name is part of the group: when promote.yml calls this file, the
+# github context is the caller's, so without it a promotion run and a push run
+# on beta would share a group and cancel each other.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
+    # Renders as "Lint, test, audit (Node 20)", "(Node 22)" and "(Node 24)".
     name: Lint, test, audit (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     timeout-minutes: 15

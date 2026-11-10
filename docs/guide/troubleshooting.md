@@ -67,6 +67,23 @@ The page was open too long. Go back, reload the page, and do it again.
 Type your password (and code), select **Confirm**, then make the change again. See
 [Confirm it is you](getting-started.md#confirm-it-is-you).
 
+## My password manager puts my email in the code box
+
+Your password manager should fill the password and offer the code. Cubhouse marks the code box
+as a one-time code, so 1Password, Bitwarden, Chrome, and the code suggestions on iPhone, iPad, and
+Mac can fill it, or offer it above the keyboard. It should never put your email there.
+
+If it still does:
+
+- Update the password manager or browser. Older versions guessed more.
+- Check that the saved login for Cubhouse uses the email you sign in with.
+- Bitwarden: the code is filled only if the Cubhouse login in your vault has an authenticator
+  key and your plan includes it. Otherwise copy the code from your authenticator app.
+- Delete what was filled and type the 6-digit code yourself. That always works.
+
+Boxes like "Type DELETE to confirm" or a reset code are not passwords, so password managers
+should leave them empty.
+
 ## "That access code cannot be used..."
 
 It may be mistyped, used already, expired (codes last 72 hours), or tied to a different email.

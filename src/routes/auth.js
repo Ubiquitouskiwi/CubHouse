@@ -212,7 +212,12 @@ module.exports = function authRoutes(ctx) {
     if (!req.user) {
       return res.redirect('/login');
     }
-    return res.render('reauth', { title: 'Confirm it is you', error: null, needsCode: Boolean(req.user.mfaEnabled) });
+    return res.render('reauth', {
+      title: 'Confirm it is you',
+      error: null,
+      needsCode: Boolean(req.user.mfaEnabled),
+      accountEmail: req.user.email,
+    });
   });
 
   router.post('/reauth', limiters.reauthLimiter, async (req, res) => {
@@ -222,7 +227,12 @@ module.exports = function authRoutes(ctx) {
     const user = req.user;
     const password = str(req.body.password, { field: 'password', max: 1024, trim: false });
     const render = (error) =>
-      res.status(401).render('reauth', { title: 'Confirm it is you', error, needsCode: Boolean(user.mfaEnabled) });
+      res.status(401).render('reauth', {
+        title: 'Confirm it is you',
+        error,
+        needsCode: Boolean(user.mfaEnabled),
+        accountEmail: user.email,
+      });
     if (!(await verifyPassword(password, user.passwordHash))) {
       await audit(store, req, 'auth.stepup_failed', { targetType: 'user', targetId: user.id });
       return render('That password did not match.');

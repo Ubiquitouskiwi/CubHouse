@@ -8,11 +8,20 @@
   <% } %>
   <form method="post" action="<%= action %>" class="stacked-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <%#
+      This box also takes recovery codes (letters), so it is not forced numeric.
+      Keep the words "recovery" and "backup" out of the label and the
+      aria-describedby hint: Bitwarden reads both and stops treating a field as
+      a one-time-code box when it sees them.
+    %>
     <label>
-      Code
-      <input type="text" name="code" autocomplete="one-time-code" maxlength="12" required autofocus aria-describedby="code-help" />
+      6-digit code from your authenticator app
+      <input type="text" name="code" autocomplete="one-time-code" autocapitalize="off" spellcheck="false"
+        maxlength="12" required autofocus aria-describedby="code-help" />
     </label>
-    <p class="muted" id="code-help">Lost your phone? Enter one of your recovery codes (like <code>ABCDE-FGHJK</code>) instead.</p>
+    <p class="muted" id="code-help">
+      Lost your phone? Type one of the one-use codes you printed (like <code>ABCDE-FGHJK</code>) instead.
+    </p>
     <button type="submit" class="primary-button">Verify</button>
   </form>
 </section>

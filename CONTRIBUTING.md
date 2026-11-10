@@ -43,7 +43,9 @@ TEST_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5432/postgres npm run t
 ## Workflow
 
 1. Open or find an issue, and say you are working on it.
-2. Branch from `main`: `feat/<short-name>`, `fix/<short-name>`, `docs/<short-name>`.
+2. Branch from `beta` (the default branch): `feat/<short-name>`, `fix/<short-name>`,
+   `docs/<short-name>`. Pull requests go into `beta`; `production` only moves by the Promote
+   workflow ([docs/WORKFLOWS.md](./docs/WORKFLOWS.md)).
 3. Keep the change to one concern, with tests.
 4. Commit with [Conventional Commits](https://www.conventionalcommits.org/), for example
    `fix(permissions): treat a listed-everyone audience as widening`. If an AI agent wrote or

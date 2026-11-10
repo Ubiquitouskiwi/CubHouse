@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/OWNER/REPO/security/advisories/new
     about: Report it privately through GitHub. Do not open a public issue. See SECURITY.md.
   - name: Deployment and operations help
-    url: https://github.com/OWNER/REPO/blob/main/docs/DEPLOY.md
+    url: https://github.com/OWNER/REPO/blob/beta/docs/DEPLOY.md
     about: The step-by-step deployment guide and the runbook answer most setup questions.

@@ -68,9 +68,11 @@ module.exports = function supportRoutes(ctx) {
   }
 
   function renderConfirm(res, status, { action, key, state, error }) {
+    // The operator's own email, only for the hidden autofill username field.
+    const accountEmail = res.req.user.email;
     return res
       .status(status)
-      .render('support-confirm', { title: action.label, action, actionKey: key, account: state, error });
+      .render('support-confirm', { title: action.label, action, actionKey: key, account: state, error, accountEmail });
   }
 
   router.get('/support/accounts/:id/:action', supportLimiter, requireOperator, async (req, res) => {

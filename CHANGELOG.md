@@ -33,6 +33,14 @@ All notable changes to this project are documented here. The format follows
   `rate_limited`, `expired`, `signed_out`, `server_error`). All existing auth, CSRF, rate-limit
   and file checks are unchanged.
 
+### Fixed
+
+- Password managers no longer put the email into the authenticator code box on Confirm it is you,
+  turning off two-step verification, support confirmations and the settings password forms. Those
+  forms carry a hidden sign-in name (the account's email) before the password, which the server
+  ignores, and the code boxes are marked as one-time codes. Confirm boxes (DELETE, ERASE, support
+  words), reset codes and access codes tell password managers to leave them empty.
+
 ### Security
 
 - Removing a guardian now needs the other guardian's approval, and nobody can approve their own
