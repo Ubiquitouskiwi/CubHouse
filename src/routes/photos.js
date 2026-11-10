@@ -28,6 +28,19 @@ const { str, strList, validateCaption } = require('../validation');
 const UPLOAD_PATHS = ['/photos/upload', '/photos/trace'];
 
 /**
+ * The bulk uploader on Home sends each file with `Accept: application/json`
+ * and reads back `{ ok, photo }` or `{ ok: false, error: { code, message } }`.
+ * Plain form posts (no JavaScript) still get a flash message and a redirect.
+ */
+function wantsJson(req) {
+  return req.accepts(['html', 'json']) === 'json';
+}
+
+function uploadError(code, message) {
+  return { ok: false, error: { code, message } };
+}
+
+/**
  * Streaming multipart parser for the two routes that accept a file. Runs
  * BEFORE the CSRF check (so the token field can be read from the body) but
  * only for signed-in users, with a hard byte cap. The file is held in memory
@@ -40,6 +53,9 @@ function createUploadParser({ config }) {
       return next();
     }
     if (!req.session || !req.session.userId) {
+      if (wantsJson(req)) {
+        return res.status(401).json(uploadError('signed_out', 'You were signed out. Please sign in again.'));
+      }
       return res.redirect('/login');
     }
     if (!req.is('multipart/form-data')) {
@@ -125,6 +141,7 @@ function photoRoutes(ctx) {
       if (outcome.status === 'pending') {
         return {
           level: 'success',
+          pending: true,
           message: 'This widens who can see or download photos, so it is waiting for guardian approval.',
         };
       }
@@ -189,20 +206,43 @@ function photoRoutes(ctx) {
   router.post('/photos/upload', requireAuth, limiters.uploadLimiter, async (req, res) => {
     const user = req.user;
     const back = safeReturnPath(req, '/photos');
+    const json = wantsJson(req);
+    const fail = (status, code, message) => {
+      if (json) {
+        return res.status(status).json(uploadError(code, message));
+      }
+      req.flash('error', message);
+      return res.redirect(back);
+    };
+    const done = (photo, sharing, message) => {
+      if (json) {
+        return res.status(201).json({
+          ok: true,
+          photo: {
+            id: photo.id,
+            pending: photo.pendingApproval === true,
+            // Only a guardian can open a new photo; a contribution is hidden
+            // from its sender until it is approved.
+            url: user.role === ROLES.PARENT ? `/photos/${photo.id}` : null,
+          },
+          sharing,
+          message,
+        });
+      }
+      req.flash('success', message);
+      return res.redirect(back);
+    };
     const file = req.uploadFile;
     if (!file || (!file.buffer && !file.tooLarge)) {
-      req.flash('error', 'Choose a photo to upload.');
-      return res.redirect(back);
+      return fail(400, 'no_file', 'Choose a photo to upload.');
     }
     if (file.tooLarge) {
       const mb = Math.round(config.uploads.maxBytes / (1024 * 1024));
-      req.flash('error', `That photo is too large. Please keep uploads under ${mb} MB.`);
-      return res.redirect(back);
+      return fail(413, 'too_large', `That photo is too large. Please keep uploads under ${mb} MB.`);
     }
     const captionCheck = validateCaption(req.body.caption);
     if (!captionCheck.ok) {
-      req.flash('error', captionCheck.error);
-      return res.redirect(back);
+      return fail(400, 'bad_caption', captionCheck.error);
     }
 
     let ingested;
@@ -210,8 +250,7 @@ function photoRoutes(ctx) {
       ingested = await media.ingest(file.buffer);
     } catch (err) {
       if (err instanceof UploadRejected) {
-        req.flash('error', err.userMessage);
-        return res.redirect(back);
+        return fail(422, err.code, err.userMessage);
       }
       throw err;
     }
@@ -240,8 +279,7 @@ function photoRoutes(ctx) {
         subject: 'A photo is waiting for approval',
         text: `${user.displayName} sent in a photo. It stays private until a guardian approves it.`,
       });
-      req.flash('success', 'Thanks! Your photo was sent to the parents for approval.');
-      return res.redirect(back);
+      return done(photo, 'awaiting_approval', 'Thanks! Your photo was sent to the parents for approval.');
     }
 
     // A parent may pick an upload profile to share it right away.
@@ -255,12 +293,14 @@ function photoRoutes(ctx) {
           { profileId: profile.id, publishedBy: user.id, ...profilePermissions(profile) },
           `Share a new photo using the "${profile.name}" profile`
         );
-        req.flash(result.level, `Photo uploaded. ${result.message}`);
-        return res.redirect(back);
+        if (!json) {
+          req.flash(result.level, `Photo uploaded. ${result.message}`);
+          return res.redirect(back);
+        }
+        return done(photo, result.pending ? 'awaiting_guardian' : 'shared', `Photo uploaded. ${result.message}`);
       }
     }
-    req.flash('success', 'Photo uploaded. It is private to parents until you share it.');
-    return res.redirect(back);
+    return done(photo, 'private', 'Photo uploaded. It is private to parents until you share it.');
   });
 
   // --- Download history and leak tracing (parents) ---
