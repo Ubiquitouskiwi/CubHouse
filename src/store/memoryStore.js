@@ -89,6 +89,7 @@ class MemoryStore {
     this.uploadProfiles = new Map();
     this.governanceRequests = new Map();
     this.settings = new Map();
+    this.siteSettings = new Map();
     this.authFailureStates = new Map();
     this.resetCodes = new Map();
     this.securityAuditEvents = [];
@@ -989,6 +990,23 @@ class MemoryStore {
       this.settings.set(key, value);
     }
     return this.settings.get(key);
+  }
+
+  // --- Site settings (editable JSON values, e.g. the family time zone) ---
+  // Separate from the insert-once settings above: these can be changed and
+  // reset by a guardian, so they never hold keys or secrets.
+
+  async getSiteSetting(key) {
+    return this.siteSettings.has(key) ? structuredClone(this.siteSettings.get(key)) : null;
+  }
+
+  async putSiteSetting(key, value) {
+    this.siteSettings.set(key, structuredClone(value));
+    return structuredClone(value);
+  }
+
+  async deleteSiteSetting(key) {
+    return this.siteSettings.delete(key);
   }
 
   // --- Auth failure states ---

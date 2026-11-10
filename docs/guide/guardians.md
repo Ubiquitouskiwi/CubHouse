@@ -147,9 +147,32 @@ Open your menu and choose **Admin**. It has everything for people, sharing and r
 
 ![The top of the Admin page with links to the Audit trail and Download history, and the Changes waiting on a guardian list](img/admin-top.png)
 
+### Family settings: time zone for emails
+
+An email can't know where its reader is, so times written in emails (when an invite code expires,
+when a change waiting on the safety delay takes effect, when a guardian's reset code starts
+working) use one family time zone, always with the zone named, for example "Fri, Nov 13, 2026,
+4:46 PM EST".
+
+1. On the Admin page, find **Family settings**.
+2. In **Time zone for emails**, type to search the list, for example `Chicago` or
+   `Europe/London`, and pick your zone. Or select **Use my current time zone** to take the one your
+   browser is in.
+3. Check the example line, **Invite codes will say: ...**, then select **Save time zone**.
+
+**In effect** shows the zone emails use now and where it comes from: set here, the server default
+(`APP_TIME_ZONE`), or UTC when neither is set. To go back to the server default, select **Clear and
+use the server default**.
+
+Any one guardian can change it at once; it does not need the other guardian, because it changes
+how times are written, not who can see anything. Each change is in the audit trail as
+**settings.time_zone**, with the old and new zone.
+
 ### Changes waiting on a guardian
 
 Protected changes asked for by either guardian. See [Two-guardian approval](two-guardian-governance.md).
+Each shows when it was asked for and, with one guardian, when it takes effect, in the family time
+zone.
 
 ### Invite a family member (access codes)
 

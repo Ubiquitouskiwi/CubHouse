@@ -98,4 +98,60 @@
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }
+
+  // Admin, Family settings: suggest the browser's own time zone and keep the
+  // "Invite codes will say" example in step with the field. Same format as
+  // the server's emails (src/timeZone.js formatInZone). Nothing is sent
+  // until the guardian presses Save; the server validates the zone again.
+  document.querySelectorAll('[data-tz-setting]').forEach(function (form) {
+    var input = form.querySelector('[data-tz-input]');
+    var example = form.querySelector('[data-tz-example]');
+    var at = Number(form.getAttribute('data-example-at'));
+    var fallback = form.getAttribute('data-server-default') || 'UTC';
+    if (!input || !example || !window.Intl) {
+      return;
+    }
+    function format(zone) {
+      try {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: zone,
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZoneName: 'short',
+        }).format(new Date(at));
+      } catch (e) {
+        return null;
+      }
+    }
+    function sync() {
+      var zone = input.value.trim().replace(/ /g, '_');
+      var text = format(zone || fallback);
+      example.textContent = text
+        ? text + (zone ? '' : ' (server default)')
+        : 'not a time zone yet. Pick one from the list.';
+    }
+    var mine = null;
+    try {
+      mine = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (e) {
+      mine = null;
+    }
+    var suggest = form.querySelector('[data-tz-suggest]');
+    var useMine = form.querySelector('[data-tz-use-mine]');
+    if (mine && suggest && useMine) {
+      form.querySelector('[data-tz-browser]').textContent = mine;
+      suggest.hidden = false;
+      useMine.addEventListener('click', function () {
+        input.value = mine;
+        sync();
+        input.focus();
+      });
+    }
+    input.addEventListener('input', sync);
+    sync();
+  });
 })();

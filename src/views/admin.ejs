@@ -18,6 +18,51 @@
   <% } %>
 </section>
 
+<% if (can.manageMembers && zoneSettings) { %>
+<% var tz = zoneSettings; %>
+<section class="card" id="family-settings" aria-labelledby="family-settings-title">
+  <h2 id="family-settings-title">Family settings</h2>
+  <form method="post" action="/admin/settings/time-zone" class="stacked-form" data-tz-setting
+    data-example-at="<%= tz.exampleAt %>" data-server-default="<%= tz.serverDefault.zone %>">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <label for="tz-input">Time zone for emails</label>
+    <input type="text" id="tz-input" name="timeZone" list="tz-options" value="<%= tz.saved || '' %>"
+      maxlength="64" autocomplete="off" spellcheck="false" placeholder="<%= tz.serverDefault.zone %> (server default)"
+      aria-describedby="tz-help tz-in-effect tz-example-line" data-tz-input />
+    <datalist id="tz-options">
+      <% tz.zones.forEach(function (zone) { %><option value="<%= zone %>"></option><% }); %>
+    </datalist>
+    <p class="muted field-help" id="tz-help">
+      Emails can't know where each reader is, so times in them (invite code
+      expiry, safety delays, reset codes) are written in this zone, with the
+      zone named. Type to search, for example Chicago or Europe/London. Leave
+      it empty to use the server default.
+    </p>
+    <p id="tz-in-effect">
+      In effect: <strong><%= tz.effective.zone %></strong>
+      <% if (tz.effective.source === 'family') { %>(set here)
+      <% } else if (tz.effective.source === 'server') { %>(server default, from APP_TIME_ZONE)
+      <% } else { %>(nothing set here or on the server, so UTC)<% } %>
+    </p>
+    <p class="muted" data-tz-suggest hidden>
+      Your browser is in <strong data-tz-browser></strong>.
+      <button type="button" class="btn-sm" data-tz-use-mine>Use my current time zone</button>
+    </p>
+    <p id="tz-example-line" aria-live="polite">
+      Invite codes will say: <strong data-tz-example><%= tz.example %></strong>
+    </p>
+    <p><button type="submit">Save time zone</button></p>
+  </form>
+  <% if (tz.saved) { %>
+    <form method="post" action="/admin/settings/time-zone" class="inline-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <input type="hidden" name="timeZone" value="" />
+      <button type="submit" class="ghost-button">Clear and use the server default (<%= tz.serverDefault.zone %>)</button>
+    </form>
+  <% } %>
+</section>
+<% } %>
+
 <% if (can.manageMembers) { %>
 <section class="card" id="governance">
   <h2>Changes waiting on a guardian</h2>
@@ -36,8 +81,8 @@
             </p>
           <% } %>
           <p class="muted">
-            Asked by <%= r.requestedByName %> on <%= r.createdAt.replace('T', ' ').slice(0, 16) %>.
-            <% if (r.executeAfter) { %>Takes effect after <%= r.executeAfter.replace('T', ' ').slice(0, 16) %> unless cancelled.<% } %>
+            Asked by <%= r.requestedByName %> on <%= formatTime(r.createdAt) %>.
+            <% if (r.executeAfter) { %>Takes effect after <%= formatTime(r.executeAfter) %> unless cancelled.<% } %>
           </p>
           <% if (!r.mine && !r.executeAfter) { %>
             <form method="post" action="/admin/governance/<%= r.id %>/approve" class="inline-form">
