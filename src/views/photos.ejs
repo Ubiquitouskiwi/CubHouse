@@ -95,12 +95,22 @@
                       </label>
                       <% } %>
 
+                        <% if (photo.kind === 'video') { %>
+                          <%# Videos open their own page (the player), not the photo lightbox. %>
+                          <a class="photo-open video-open" href="/photos/<%= photo.id %>"
+                            aria-label="Play video: <%= photo.caption || 'Untitled' %>, <%= formatDuration(photo.video && photo.video.durationMs) %>">
+                            <img src="/media/<%= photo.id %>/thumb" alt="" loading="lazy" />
+                            <span class="video-play-badge" aria-hidden="true"></span>
+                            <span class="video-duration" aria-hidden="true"><%= formatDuration(photo.video && photo.video.durationMs) %></span>
+                          </a>
+                        <% } else { %>
                         <button type="button" class="photo-open" data-photo-open data-src="/media/<%= photo.id %>/display"
                           data-caption="<%= photo.caption || '' %>" data-href="/photos/<%= photo.id %>"
                           aria-label="Open <%= photo.caption || 'photo' %>">
                           <img src="/media/<%= photo.id %>/thumb" alt="<%= photo.caption || 'Family photo' %>"
                             loading="lazy" />
                         </button>
+                        <% } %>
 
                         <figcaption class="photo-caption">
                           <span class="photo-caption-text">
@@ -113,7 +123,7 @@
                                   <% } %>
                                     <% if (!photo.downloadable) { %><span class="badge badge-locked">No download</span>
                                       <% } %>
-                                        <% if (photo.watermark) { %><span class="badge badge-audience">Watermark</span>
+                                        <% if (photo.watermark && photo.kind !== 'video') { %><span class="badge badge-audience">Watermark</span>
                                           <% } %>
                                             <% if (photo.commentsEnabled===false) { %><span
                                                 class="badge badge-locked">Comments off</span>
@@ -146,7 +156,7 @@
                                   </button>
                                 </form>
                                 <% } %>
-                                  <% if (cap.setPermissions) { %>
+                                  <% if (cap.setPermissions && photo.kind !== 'video') { %>
                                     <form method="post" action="/photos/<%= photo.id %>/toggle-download"
                                       class="inline-form">
                                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
