@@ -23,7 +23,10 @@
     </label>
     <label>
       Username
-      <input type="text" name="username" value="<%= user.username || '' %>"
+      <%# A display handle, not the sign-in name (sign-in uses the email), so
+          password managers are told to leave it alone. %>
+      <input type="text" name="username" value="<%= user.username || '' %>" autocomplete="nickname"
+        data-1p-ignore data-lpignore="true" data-bwignore data-form-type="other"
         placeholder="optional, 3 to 32 characters" pattern="[a-zA-Z0-9_.\-]{3,32}" />
     </label>
     <label>
@@ -43,6 +46,7 @@
   <p class="muted">At least 12 characters. A short sentence works well. Changing it signs out your other devices.</p>
   <form class="stacked-form" method="post" action="/settings/password">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <%- include('partials/autofill-username', { email: user.email }) %>
     <label>
       Current password
       <input type="password" name="currentPassword" autocomplete="current-password" required />
@@ -110,8 +114,10 @@
     </fieldset>
     <label>
       Type DELETE to confirm
-      <input type="text" name="confirm" autocomplete="off" required />
+      <input type="text" name="confirm" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore
+        data-form-type="other" required />
     </label>
+    <%- include('partials/autofill-username', { email: user.email }) %>
     <label>
       Password
       <input type="password" name="password" autocomplete="current-password" required />

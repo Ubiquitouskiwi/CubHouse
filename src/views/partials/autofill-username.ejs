@@ -1,0 +1,12 @@
+<%#
+  Hidden sign-in name for password managers on forms that ask for the current
+  password but show no email box. Without it, managers take the next text box
+  (usually the authenticator code) for the username and fill the email there.
+  Pattern from Chromium's "Password Form Styles that Chromium Understands" and
+  1Password's "Design your website to work best with 1Password": a username
+  field with the account's value, hidden with display:none.
+  The server never reads this field; it already knows the account from the
+  session. Include it immediately before the password box.
+%>
+<input type="email" name="username" value="<%= email %>" autocomplete="username"
+  class="autofill-username" readonly tabindex="-1" aria-hidden="true" />

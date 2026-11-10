@@ -11,14 +11,16 @@
   <% } %>
   <form method="post" action="/reauth" class="stacked-form">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <%- include('partials/autofill-username', { email: accountEmail }) %>
     <label>
       Password
       <input type="password" name="password" autocomplete="current-password" required autofocus />
     </label>
     <% if (needsCode) { %>
       <label>
-        Authenticator code
-        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+        6-digit code from your authenticator app
+        <input type="text" name="code" inputmode="numeric" pattern="[0-9 ]*" autocomplete="one-time-code"
+          autocapitalize="off" spellcheck="false" maxlength="7" required />
       </label>
     <% } %>
     <button type="submit" class="primary-button">Confirm</button>

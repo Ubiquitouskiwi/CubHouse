@@ -845,6 +845,13 @@ code {
   font-size: 0.95rem;
 }
 
+/* Hidden username for password managers (partials/autofill-username.ejs).
+   display:none as in the Chromium and 1Password examples; !important because
+   the input[type='email'] rule above sets display:block. */
+input.autofill-username {
+  display: none !important;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

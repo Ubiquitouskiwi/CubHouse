@@ -20,11 +20,17 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
     <label>
       Type <strong><%= action.word %></strong> to confirm
-      <input type="text" name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required autofocus />
+      <input type="text" name="confirm" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore
+        data-form-type="other" autocapitalize="characters" spellcheck="false" required autofocus />
     </label>
+    <%# No password here, but the sign-in name lets managers match the code to
+        this account instead of putting the email into the code box. %>
+    <%- include('partials/autofill-username', { email: accountEmail }) %>
+    <%# No "recovery" in this label: Bitwarden skips fields that mention it. %>
     <label>
-      Authenticator code (a new one, not a recovery code)
-      <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required />
+      6-digit code from your authenticator app (wait for a fresh one; printed one-use codes do not work here)
+      <input type="text" name="code" inputmode="numeric" pattern="[0-9 ]*" autocomplete="one-time-code"
+        autocapitalize="off" spellcheck="false" maxlength="7" required />
     </label>
     <button type="submit" class="primary-button"><%= action.label %></button>
     <a class="ghost-button" href="/support">Cancel</a>
