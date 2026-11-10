@@ -17,6 +17,10 @@ const { createRateLimiters } = require('./security/rateLimiters');
 const { createSessionGuard, createRequireStepUp, operatorScope } = require('./security/sessionGuard');
 const { configFindings, storeFindings, enforce, assertNotDeployedDev } = require('./security/bootstrapChecks');
 const { createMediaService } = require('./media');
+const { createFfmpeg } = require('./media/ffmpeg');
+const { createVideoUploads } = require('./media/videoUploads');
+const { createVideoQueue } = require('./jobs/videoQueue');
+const { formatDuration } = require('./media/video');
 const { createNotifier } = require('./notify');
 const { createGovernance } = require('./governance');
 const { createActions } = require('./services/actions');
@@ -32,6 +36,7 @@ const photoRoutes = require('./routes/photos');
 const albumRoutes = require('./routes/albums');
 const supportRoutes = require('./routes/support');
 const usageRoutes = require('./routes/usage');
+const videoRoutes = require('./routes/videos');
 
 // Stylesheet cache-busting token, computed once at boot (not per request).
 const ASSET_VERSION = (() => {
@@ -50,6 +55,7 @@ const ASSET_VERSION = (() => {
  *                 is set, otherwise the in-process memory store)
  *   mediaStorage  media storage backend (default: from config.media)
  *   notifier      notification sender (default: from config.notifications)
+ *   video         overrides for config.video (tests: a temp work dir)
  */
 async function buildApp(store, options = {}) {
   const app = express();
@@ -58,6 +64,8 @@ async function buildApp(store, options = {}) {
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
   app.disable('x-powered-by');
+  // Shared view helper: video durations as m:ss.
+  app.locals.formatDuration = formatDuration;
   // Must be set BEFORE the session middleware: secure cookies and req.ip both
   // depend on it. The exact hop count means a client cannot forge req.ip.
   app.set('trust proxy', config.trustProxyHops > 0 ? config.trustProxyHops : false);
@@ -67,6 +75,13 @@ async function buildApp(store, options = {}) {
   const media = createMediaService({ store, config, storage: options.mediaStorage });
   runtime.mediaKind = media.backendKind;
   const actions = createActions({ store, media, config, notifier });
+  // Videos: upload sessions (temp files), the ffmpeg runner and the job queue.
+  // The queue is started by main(), not here, so tests drive it by hand.
+  const videoConfig = { ...config, video: { ...config.video, ...(options.video || {}) } };
+  const ffmpeg = options.ffmpeg || createFfmpeg(videoConfig.video);
+  const videoUploads = createVideoUploads({ store, config: videoConfig });
+  const videoQueue = createVideoQueue({ store, config: videoConfig, media, ffmpeg, notifier });
+  await videoQueue.ensureDirs();
   const governance = createGovernance({ store, config, notifier, executors: actions.executors });
 
   let rateLimitStoreFactory;
@@ -94,7 +109,22 @@ async function buildApp(store, options = {}) {
   // Aggregate usage counters for the guardian Usage page (src/usage.js).
   const usage = options.usage || createUsageRecorder({ store });
   const requireStepUp = createRequireStepUp({ config });
-  const ctx = { store, config, media, notifier, governance, actions, limiters, requireStepUp, usage };
+  const ctx = {
+    store,
+    config,
+    // config.video plus any test overrides.
+    videoConfig: videoConfig.video,
+    media,
+    notifier,
+    governance,
+    actions,
+    limiters,
+    requireStepUp,
+    usage,
+    ffmpeg,
+    videoUploads,
+    videoQueue,
+  };
   app.locals.services = ctx;
 
   // --- Middleware, in order ---
@@ -170,6 +200,8 @@ async function buildApp(store, options = {}) {
   app.use('/', accountRoutes(ctx));
   app.use('/', usageRoutes(ctx));
   app.use('/', adminRoutes(ctx));
+  // Before photoRoutes: /media/:id/video must not reach /media/:id/:variant.
+  app.use('/', videoRoutes(ctx));
   app.use('/', photoRoutes(ctx));
   app.use('/', albumRoutes(ctx));
 
@@ -330,9 +362,15 @@ async function main() {
   await seedAccounts(store);
 
   const app = await buildApp(store);
-  const { media, governance, notifier, usage } = app.locals.services;
+  const { media, governance, notifier, usage, videoQueue, videoUploads, ffmpeg } = app.locals.services;
   await seedSampleContent(store, media);
   scheduleRetention({ store, config, governance, notifier });
+  // Background video processing (one job at a time, low priority).
+  if (!(await ffmpeg.isAvailable())) {
+    logger.warn('ffmpeg/ffprobe not found: video uploads are turned off until they are installed.');
+  }
+  await videoQueue.start();
+  videoUploads.start();
 
   // Email carries security alerts and governance requests, so check it at
   // boot and every 6 hours. A failure is logged and shown by /readyz (503),
@@ -358,6 +396,9 @@ async function main() {
   // container Node is PID 1, which ignores SIGTERM unless it is handled.
   const shutdown = (signal) => {
     logger.info({ signal }, 'shutting down');
+    videoUploads.stop();
+    // Hand a running video job back so the next instance picks it up at once.
+    videoQueue.stop().catch(() => {});
     // Write the last minute of buffered usage counts (flush never rejects).
     server.close(() => usage.flush().then(() => process.exit(0)));
     setTimeout(() => process.exit(0), 10 * 1000).unref();

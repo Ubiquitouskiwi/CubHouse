@@ -206,6 +206,9 @@ function photoCapabilities(viewer, photo) {
   const v = typeof viewer === 'string' ? { role: viewer } : viewer || {};
   const r = normalizeRole(v.role);
   const isParent = r === ROLES.PARENT;
+  // Videos stay inside the app for now (phase 1): nobody, guardians included,
+  // gets a download. The download route refuses them too.
+  const isVideo = Boolean(photo && photo.kind === 'video');
 
   // Parent: full control, always.
   if (isParent) {
@@ -218,7 +221,7 @@ function photoCapabilities(viewer, photo) {
       share: true,
       hide: true,
       view: true,
-      download: true,
+      download: !isVideo,
       addToAlbum: true,
     });
   }
@@ -256,7 +259,7 @@ function photoCapabilities(viewer, photo) {
     view: visible,
     // A non-parent can only download when the parent marked the photo
     // downloadable AND the viewer is in its audience.
-    download: photo ? downloadable && visible : false,
+    download: photo ? downloadable && visible && !isVideo : false,
     // Albums are personal; a user/dev may add any photo they can view.
     addToAlbum: visible,
   });

@@ -90,6 +90,22 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'Upload limit reached for now. Please try again later.',
     }),
+    // Video upload requests (start, each chunk, finish, cancel). A 500 MB
+    // video is about 63 chunks; the hourly video count and byte limits are
+    // enforced separately (src/media/videoUploads.js).
+    videoUploadLimiter: make('video-upload', {
+      windowMs: 60 * 60 * 1000,
+      limit: 2000,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'Upload limit reached for now. Please try again later.',
+    }),
+    // Polling a video's processing status (every few seconds, owner only).
+    videoStatusLimiter: make('video-status', {
+      windowMs: 60 * 60 * 1000,
+      limit: 2400,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'Checking too often. Please wait a moment.',
+    }),
     reauthLimiter: make('reauth', {
       windowMs: 15 * 60 * 1000,
       limit: 10,

@@ -23,6 +23,7 @@
 	}
 
 	# Upload cap at the edge (the app enforces its own, smaller per-route caps).
+	# Videos never need more: they arrive as separate 8 MB chunk requests.
 	request_body {
 		max_size 20MB
 	}

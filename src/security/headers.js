@@ -28,6 +28,9 @@ function createSecurityHeaders({ isProduction }) {
         // blob: is only the local upload preview (an object URL that never
         // leaves the browser). No data:, no third-party image hosts.
         imgSrc: ["'self'", 'blob:'],
+        // Videos stream from our own origin (/media/:id/video). blob: is only
+        // the uploader reading a picked clip's length in the browser.
+        mediaSrc: ["'self'", 'blob:'],
         fontSrc: ["'self'"],
         connectSrc: ["'self'"],
         formAction: ["'self'"],
