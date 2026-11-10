@@ -17,6 +17,15 @@ All notable changes to this project are documented here. The format follows
   when asked with `Accept: application/json`. So do the rate limiter and the error handler (codes
   `rate_limited`, `expired`, `signed_out`, `server_error`). All existing auth, CSRF, rate-limit
   and file checks are unchanged.
+- Invite codes can be emailed. On **Invite a family member**, tick **Email the code to the address
+  above** (optionally with a first name). The email goes out when the code is created: on the other
+  guardian's approval, or after the solo safety delay. Nothing is sent if the request is declined,
+  cancelled or expires. Open codes also get a **Send by email** action. The email is HTML plus plain
+  text in the site's palette, with light and dark modes, and it loads nothing remote. The Join link
+  carries the code in the URL fragment, so it stays out of server logs; the sign-up page only
+  prefills it and validation is unchanged. Sends are rate-limited per guardian (10 an hour) and
+  audited as `invite.emailed` with a masked address, never the code. Without working email the
+  form says so and the code is still shown.
 
 ### Fixed
 

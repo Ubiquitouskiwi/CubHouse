@@ -3,6 +3,10 @@
 const { generateAccessCode } = require('../auth');
 const { isValidRole, ROLES } = require('../permissions');
 const { generateResetCode, hashSecret } = require('../security/recovery');
+const { audit } = require('../audit');
+const { logger } = require('../logger');
+const { buildInviteEmail } = require('./inviteEmail');
+const { maskEmail } = require('./support');
 
 /**
  * Side-effecting operations shared by routes and by governance executors.
@@ -86,6 +90,40 @@ function createActions({ store, media, config, notifier }) {
   }
 
   /**
+   * Email an open invite code to the person it is for. Called when a governed
+   * code is created (approval or the solo delay) and from "Send by email".
+   * Never throws: returns { ok, masked, reason }. The audit entry and logs
+   * carry only a masked address, never the code.
+   */
+  async function emailInviteCode(accessCode, { to, firstName, sentBy, req } = {}) {
+    const masked = maskEmail(to);
+    if (!notifier || !notifier.emailAvailable()) {
+      return { ok: false, masked, reason: 'not_configured' };
+    }
+    const inviter = sentBy ? await store.findUserById(sentBy) : null;
+    const message = buildInviteEmail({
+      appName: config.app.name,
+      origin: config.publicOrigin,
+      code: accessCode.code,
+      inviterName: inviter ? inviter.displayName : null,
+      firstName,
+      expiresAt: accessCode.expiresAt,
+    });
+    try {
+      await notifier.sendEmail({ to, subject: message.subject, text: message.text, html: message.html });
+    } catch (err) {
+      logger.warn({ err: { type: err && err.name } }, 'invite email failed');
+      await audit(store, req, 'invite.email_failed', { targetType: 'accessCode', details: { to: masked } });
+      return { ok: false, masked, reason: 'failed' };
+    }
+    await audit(store, req, 'invite.emailed', {
+      targetType: 'accessCode',
+      details: { to: masked, ...(req ? {} : { requestedBy: sentBy || null }) },
+    });
+    return { ok: true, masked };
+  }
+
+  /**
    * Issue a one-time sign-in reset code for an account (forgotten password,
    * lost 2FA phone). The code is returned ONCE for the guardian to hand over
    * in person or by phone; only its hash is stored. Older unused codes for
@@ -162,9 +200,19 @@ function createActions({ store, media, config, notifier }) {
       const user = await store.addUserToGroup(userId, groupId);
       return { message: user ? 'Member added to group.' : 'That member or group no longer exists.' };
     },
-    'accessCode.create': async ({ note, groupId, intendedEmail }, { requestedBy }) => {
+    // Runs on approval, on the solo delay (runDue), or at once with no delay.
+    // A declined, cancelled or expired request never gets here, so nothing is
+    // emailed. The email is built from the code in hand at creation time.
+    'accessCode.create': async ({ note, groupId, intendedEmail, sendEmail, firstName }, { requestedBy, req }) => {
       const ac = await createInviteCode({ createdBy: requestedBy, note, groupId, intendedEmail });
-      return { message: `Invite code created: ${ac.code}`, code: ac.code };
+      let message = `Invite code created: ${ac.code}`;
+      if (sendEmail && ac.intendedEmail) {
+        const sent = await emailInviteCode(ac, { to: ac.intendedEmail, firstName, sentBy: requestedBy, req });
+        message += sent.ok
+          ? `. It was emailed to ${sent.masked}.`
+          : `. It could not be emailed (${sent.reason === 'not_configured' ? 'email is not set up' : 'sending failed'}), so share it yourself.`;
+      }
+      return { message, code: ac.code };
     },
     'user.setRole': async ({ userId, role }) => {
       if (!isValidRole(role)) {
@@ -200,7 +248,7 @@ function createActions({ store, media, config, notifier }) {
     },
   };
 
-  return { deletePhotoCompletely, createInviteCode, removeMember, issueResetCode, executors };
+  return { deletePhotoCompletely, createInviteCode, emailInviteCode, removeMember, issueResetCode, executors };
 }
 
 module.exports = { createActions };
