@@ -8,8 +8,9 @@ on:
   branch_protection_rule:
   schedule:
     - cron: '27 6 * * 1'
+  # Scorecard only supports the default branch (beta).
   push:
-    branches: [main]
+    branches: [beta]
   workflow_dispatch:
 
 permissions: read-all

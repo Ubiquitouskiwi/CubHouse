@@ -18,7 +18,7 @@ const {
 const REPO = 'example-owner/example-repo';
 const SHA = '0123456789abcdef0123456789abcdef01234567';
 const RAW = `https://raw.githubusercontent.com/wiki/${REPO}`;
-const BLOB = `https://github.com/${REPO}/blob/main`;
+const BLOB = `https://github.com/${REPO}/blob/beta`;
 
 function tempDir(t, prefix) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

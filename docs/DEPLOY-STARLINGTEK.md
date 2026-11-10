@@ -109,6 +109,15 @@ Give image processing room (large photos are decoded in memory; the default limi
 stk set family-photos memoryLimit=768m
 ```
 
+Deploy from `production`, not the default branch (`beta`). Pull requests merge into `beta`, and the
+Promote workflow fast-forwards `production` when beta is ready ([WORKFLOWS.md](./WORKFLOWS.md)), so
+only promoted commits reach the live site:
+
+```bash
+stk set family-photos branch=production   # e.g. stk set cubhouse branch=production
+stk status family-photos                  # shows the tracked branch
+```
+
 ## 6. Settings, headers and upload cap
 
 Put the database CA certificate where the container can read it (`/data` in the container):
@@ -262,6 +271,7 @@ any non-200. StarlingTek already probes `/healthz` every 30 seconds and alerts o
 | Logs | `stk logs family-photos -f` |
 | Change a setting | `stk env family-photos KEY=VALUE` then `stk restart family-photos` |
 | End every session (compromise) | new `SESSION_SECRET` via `stk env`, then `stk restart family-photos` |
+| Ship what is on beta | Actions, "Promote beta -> production", Run workflow ([WORKFLOWS.md](./WORKFLOWS.md)) |
 | Roll back a bad release | `stk rollback family-photos` |
 | Break-glass reset code (RUNBOOK 1b, step 4) | `sudo docker exec "$(sudo docker ps -q --filter label=dev.starlingtek.project=family-photos | head -1)" node scripts/issue-reset-code.js you@example.org` |
 
