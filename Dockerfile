@@ -16,6 +16,12 @@ RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # --- Stage 2: runtime ---------------------------------------------------------
 FROM node:${NODE_VERSION}-bookworm-slim
+# ffmpeg/ffprobe for videos (check, transcode, poster frame), from Debian's own
+# signed repository. --no-install-recommends keeps it to the libraries ffmpeg
+# needs. Adds an estimated 250-400 MB to the image (see CHANGELOG).
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
 # Production by default: safe boot refuses to start on any unsafe setting.
 # HOST=0.0.0.0 because the host reaches the app through a published port; the
 # publish must be 127.0.0.1 only (StarlingTek always does this). APP_IN_CONTAINER
@@ -34,6 +40,8 @@ COPY package.json package-lock.json ./
 COPY src ./src
 COPY public ./public
 COPY scripts ./scripts
+# Video upload temp files and transcode scratch go under data/video-work, or
+# $STK_DATA_DIR/video-work on StarlingTek (so a queued job survives a swap).
 RUN mkdir -p /app/data && chown node:node /app/data
 
 # The base image's unprivileged "node" user is uid/gid 1000, which is also the

@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const { buildEvent } = require('../audit');
+const { newVideoJob, applyJobChanges, planClaim } = require('./videoJobs');
 
 /**
  * In-memory data store for development and testing.
@@ -59,6 +60,17 @@ function copyUser(u) {
     : null;
 }
 
+/** The fields a video record keeps (manifest + what the gallery shows). */
+function videoFields(v) {
+  const src = v || {};
+  return {
+    segmentBytes: src.segmentBytes,
+    segmentCount: src.segmentCount,
+    byteLength: src.byteLength,
+    durationMs: src.durationMs || 0,
+  };
+}
+
 function copyPhoto(p) {
   return p
     ? {
@@ -66,6 +78,7 @@ function copyPhoto(p) {
         audienceUserIds: [...(p.audienceUserIds || [])],
         audienceGroupIds: [...(p.audienceGroupIds || [])],
         variants: p.variants ? { ...p.variants } : {},
+        ...(p.video ? { video: { ...p.video } } : {}),
       }
     : null;
 }
@@ -94,6 +107,8 @@ class MemoryStore {
     this.securityAuditEvents = [];
     // Usage rollups: `${day}|${metric}` -> count. Aggregates only.
     this.usageDaily = new Map();
+    // Video processing jobs (src/store/videoJobs.js).
+    this.videoJobs = new Map();
     this.ready = Promise.resolve();
   }
 
@@ -295,6 +310,13 @@ class MemoryStore {
       if (d.userId === id) {
         d.userId = null;
         d.userDisplayName = 'Former member';
+      }
+    }
+    // Their video jobs (caption, status) go too; the worker cleans up any
+    // upload left behind (src/jobs/videoQueue.js sweep).
+    for (const [jid, j] of this.videoJobs) {
+      if (j.ownerId === id) {
+        this.videoJobs.delete(jid);
       }
     }
     return true;
@@ -519,9 +541,16 @@ class MemoryStore {
     commentsEnabled,
     reactionsEnabled,
     profileId,
+    kind,
+    video,
   }) {
+    const isVideo = kind === 'video';
     const photo = {
       id: crypto.randomUUID(),
+      // 'photo' or 'video'. A video also carries its stored-segment manifest
+      // and duration (see src/media/index.js).
+      kind: isVideo ? 'video' : 'photo',
+      ...(isVideo ? { video: videoFields(video) } : {}),
       caption: caption || '',
       mediaId: mediaId || null,
       variants: variants ? { ...variants } : {},
@@ -533,7 +562,8 @@ class MemoryStore {
       publishedBy: publishedBy || null,
       pendingApproval: pendingApproval === true,
       hidden: hidden === true,
-      downloadable: downloadable === true,
+      // Videos are never downloadable (phase 1), whatever a caller asks.
+      downloadable: downloadable === true && !isVideo,
       watermark: watermark === true,
       // Private by default: only parents see a photo until they choose.
       audienceType: audienceType || 'parents',
@@ -576,6 +606,9 @@ class MemoryStore {
       if (changes[key] !== undefined) {
         photo[key] = changes[key] === true;
       }
+    }
+    if (photo.kind === 'video') {
+      photo.downloadable = false;
     }
     if (changes.audienceType !== undefined) {
       photo.audienceType = changes.audienceType;
@@ -1093,6 +1126,49 @@ class MemoryStore {
     }
     return removed;
   }
+
+  // --- Video processing jobs (one row each; see src/store/videoJobs.js) ---
+
+  async createVideoJob(fields) {
+    const job = newVideoJob(fields);
+    this.videoJobs.set(job.id, job);
+    return { ...job };
+  }
+
+  async findVideoJob(id) {
+    const job = this.videoJobs.get(id);
+    return job ? { ...job } : null;
+  }
+
+  async updateVideoJob(id, changes = {}) {
+    const job = this.videoJobs.get(id);
+    return job ? { ...applyJobChanges(job, changes) } : null;
+  }
+
+  async listVideoJobs() {
+    return [...this.videoJobs.values()].map((j) => ({ ...j })).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async listVideoJobsByOwnerSince(ownerId, sinceIso) {
+    return (await this.listVideoJobs()).filter((j) => j.ownerId === ownerId && j.createdAt >= sinceIso);
+  }
+
+  async claimVideoJob({ now = Date.now(), leaseMs, maxAttempts }) {
+    const open = [...this.videoJobs.values()].filter((j) => j.status === 'queued' || j.status === 'running');
+    const { claim, exhausted } = planClaim(open, { now, leaseMs, maxAttempts });
+    return { job: claim ? { ...claim } : null, exhausted: exhausted.map((j) => ({ ...j })) };
+  }
+
+  async deleteVideoJobsFinishedBefore(beforeIso) {
+    let removed = 0;
+    for (const [id, j] of this.videoJobs) {
+      if ((j.status === 'done' || j.status === 'failed') && (j.finishedAt || j.updatedAt) < beforeIso) {
+        this.videoJobs.delete(id);
+        removed += 1;
+      }
+    }
+    return removed;
+  }
 }
 
-module.exports = { MemoryStore };
+module.exports = { MemoryStore, videoFields };

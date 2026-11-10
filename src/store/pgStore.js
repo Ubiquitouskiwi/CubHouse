@@ -3,6 +3,8 @@
 const crypto = require('crypto');
 const { buildEvent } = require('../audit');
 const { getPool } = require('./pgSupport');
+const { videoFields } = require('./memoryStore');
+const { newVideoJob, applyJobChanges, planClaim } = require('./videoJobs');
 
 /**
  * PostgreSQL data store for production. Same async interface and the same
@@ -49,6 +51,8 @@ const PHOTO_BOOL = ['hidden', 'downloadable', 'watermark', 'commentsEnabled', 'r
 
 // One advisory-lock id serializes audit appends (the chain needs one writer).
 const AUDIT_LOCK_ID = 7316001;
+// Another serializes video job claims (one job at a time, every instance).
+const VIDEO_JOB_LOCK_ID = 7316002;
 
 const UNIQUE_VIOLATION = '23505';
 
@@ -83,9 +87,10 @@ class PgStore {
     try {
       await this.pool.query('SELECT 1 FROM app_users LIMIT 1');
       await this.pool.query('SELECT 1 FROM security_audit_events LIMIT 1');
+      await this.pool.query('SELECT 1 FROM app_video_jobs LIMIT 1');
     } catch (err) {
       throw new Error(
-        'The Postgres schema is missing. Apply deploy/sql/001_security.sql and 002_data_store.sql first: ' +
+        'The Postgres schema is missing or out of date. Apply every file in deploy/sql (001 to 004) in order: ' +
           err.message,
         { cause: err }
       );
@@ -293,6 +298,8 @@ class PgStore {
           await this.put('app_downloads', d, c);
         }
       }
+      // Their video jobs go too; the worker's sweep removes any leftover upload.
+      await c.query('DELETE FROM app_video_jobs WHERE owner_id = $1', [id]);
       return true;
     });
   }
@@ -520,8 +527,11 @@ class PgStore {
   // --- Photos ---
 
   async createPhoto(fields) {
+    const isVideo = fields.kind === 'video';
     const photo = {
       id: crypto.randomUUID(),
+      kind: isVideo ? 'video' : 'photo',
+      ...(isVideo ? { video: videoFields(fields.video) } : {}),
       caption: fields.caption || '',
       mediaId: fields.mediaId || null,
       variants: fields.variants ? { ...fields.variants } : {},
@@ -532,7 +542,8 @@ class PgStore {
       publishedBy: fields.publishedBy || null,
       pendingApproval: fields.pendingApproval === true,
       hidden: fields.hidden === true,
-      downloadable: fields.downloadable === true,
+      // Videos are never downloadable (phase 1), whatever a caller asks.
+      downloadable: fields.downloadable === true && !isVideo,
       watermark: fields.watermark === true,
       audienceType: fields.audienceType || 'parents',
       audienceUserIds: Array.isArray(fields.audienceUserIds) ? [...fields.audienceUserIds] : [],
@@ -574,6 +585,9 @@ class PgStore {
         if (changes[key] !== undefined) {
           photo[key] = changes[key] === true;
         }
+      }
+      if (photo.kind === 'video') {
+        photo.downloadable = false;
       }
       if (changes.audienceType !== undefined) {
         photo.audienceType = changes.audienceType;
@@ -1123,6 +1137,74 @@ class PgStore {
 
   async purgeUsageBefore(beforeDay) {
     const { rowCount } = await this.pool.query('DELETE FROM app_usage_daily WHERE day < $1::date', [beforeDay]);
+    return rowCount;
+  }
+
+  // --- Video processing jobs (deploy/sql/004_video.sql; src/store/videoJobs.js) ---
+
+  async putVideoJob(job, q = this.pool) {
+    await q.query('UPDATE app_video_jobs SET status = $2, doc = $3 WHERE id = $1', [job.id, job.status, job]);
+    return job;
+  }
+
+  async createVideoJob(fields) {
+    const job = newVideoJob(fields);
+    await this.pool.query(
+      'INSERT INTO app_video_jobs (id, owner_id, status, created_at, doc) VALUES ($1, $2, $3, $4, $5)',
+      [job.id, job.ownerId, job.status, job.createdAt, job]
+    );
+    return job;
+  }
+
+  async findVideoJob(id) {
+    return this.one('app_video_jobs', id);
+  }
+
+  async updateVideoJob(id, changes = {}) {
+    return this.tx(async (c) => {
+      const job = await this.one('app_video_jobs', id, c, { lock: true });
+      return job ? this.putVideoJob(applyJobChanges(job, changes), c) : null;
+    });
+  }
+
+  async listVideoJobs() {
+    return (await this.all('app_video_jobs')).sort(byCreatedAsc);
+  }
+
+  async listVideoJobsByOwnerSince(ownerId, sinceIso) {
+    const { rows } = await this.pool.query(
+      'SELECT doc FROM app_video_jobs WHERE owner_id = $1 AND created_at >= $2 ORDER BY created_at',
+      [ownerId, sinceIso]
+    );
+    return rows.map((r) => r.doc);
+  }
+
+  async claimVideoJob({ now = Date.now(), leaseMs, maxAttempts }) {
+    return this.tx(async (c) => {
+      await c.query('SELECT pg_advisory_xact_lock($1)', [VIDEO_JOB_LOCK_ID]);
+      const { rows } = await c.query(
+        "SELECT doc FROM app_video_jobs WHERE status IN ('queued', 'running') FOR UPDATE"
+      );
+      const { claim, exhausted } = planClaim(
+        rows.map((r) => r.doc),
+        { now, leaseMs, maxAttempts }
+      );
+      for (const j of exhausted) {
+        await this.putVideoJob(j, c);
+      }
+      if (claim) {
+        await this.putVideoJob(claim, c);
+      }
+      return { job: claim, exhausted };
+    });
+  }
+
+  async deleteVideoJobsFinishedBefore(beforeIso) {
+    const { rowCount } = await this.pool.query(
+      `DELETE FROM app_video_jobs WHERE status IN ('done', 'failed')
+         AND COALESCE(doc->>'finishedAt', doc->>'updatedAt') < $1`,
+      [beforeIso]
+    );
     return rowCount;
   }
 }
