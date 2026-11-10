@@ -22,7 +22,15 @@ All notable changes to this project are documented here. The format follows
 - The image now installs Debian's `ffmpeg` package (`--no-install-recommends`), which makes it
   larger by an estimated 250-400 MB; measure with `docker image ls` after the first build. CI
   installs ffmpeg so the video tests run.
-
+- Family time zone for emails: times written into emails are now in the family's time zone with
+  the zone named, for example "Fri, Nov 13, 2026, 4:46 PM EST", instead of UTC. That covers the
+  invite code's expiry, the solo safety delay's "takes effect" time (in the guardian email and on
+  the Admin page), and when a guardian's delayed reset code starts working. A guardian picks the
+  zone in Admin, **Family settings** (searchable list, "Use my current time zone", live example);
+  any one guardian can change it, it is not governed, and each change is audit-logged as
+  `settings.time_zone` (old and new zone). `APP_TIME_ZONE` (an IANA zone such as
+  `America/New_York`) is now only the default when no guardian has chosen one; with neither, UTC.
+  Stored in a new `app_site_settings` table: apply `deploy/sql/005_site_settings.sql`.
 - Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
   status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
   photo and for all, an end summary with a link to the new photos, and a warning before leaving
@@ -32,6 +40,15 @@ All notable changes to this project are documented here. The format follows
   when asked with `Accept: application/json`. So do the rate limiter and the error handler (codes
   `rate_limited`, `expired`, `signed_out`, `server_error`). All existing auth, CSRF, rate-limit
   and file checks are unchanged.
+- Invite codes can be emailed. On **Invite a family member**, tick **Email the code to the address
+  above** (optionally with a first name). The email goes out when the code is created: on the other
+  guardian's approval, or after the solo safety delay. Nothing is sent if the request is declined,
+  cancelled or expires. Open codes also get a **Send by email** action. The email is HTML plus plain
+  text in the site's palette, with light and dark modes, and it loads nothing remote. The Join link
+  carries the code in the URL fragment, so it stays out of server logs; the sign-up page only
+  prefills it and validation is unchanged. Sends are rate-limited per guardian (10 an hour) and
+  audited as `invite.emailed` with a masked address, never the code. Without working email the
+  form says so and the code is still shown.
 
 ### Fixed
 

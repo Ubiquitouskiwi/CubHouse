@@ -27,6 +27,7 @@ function ipKey(req) {
 // Photos one person may upload per hour. Shown on the upload form so a big
 // batch is not a surprise.
 const UPLOADS_PER_HOUR = 120;
+const INVITE_EMAILS_PER_HOUR = 10;
 
 function createRateLimiters({ storeFactory } = {}) {
   const make = (name, opts) =>
@@ -112,7 +113,23 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'Too many confirmation attempts. Please wait and try again.',
     }),
+    // Family settings saves (e.g. the time zone), per guardian. Generous for
+    // a person, a ceiling for a script.
+    settingsLimiter: make('settings', {
+      windowMs: 15 * 60 * 1000,
+      limit: 30,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'You have changed settings a lot just now. Please wait a few minutes and try again.',
+    }),
+    // Invite codes sent by email, per guardian (counted when the guardian
+    // asks, including requests still waiting for approval).
+    inviteEmailLimiter: make('invite-email', {
+      windowMs: 60 * 60 * 1000,
+      limit: INVITE_EMAILS_PER_HOUR,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'You have sent a lot of invite emails just now. Please wait an hour and try again.',
+    }),
   };
 }
 
-module.exports = { createRateLimiters, UPLOADS_PER_HOUR };
+module.exports = { createRateLimiters, UPLOADS_PER_HOUR, INVITE_EMAILS_PER_HOUR };

@@ -6,6 +6,18 @@ const { PHOTO_AUDIENCE, portalCapabilities, isValidPhotoAudience, ROLE_LABELS, R
 const { audit, verifyChain } = require('../audit');
 const { buildZip } = require('../services/zip');
 const { str, strList, validateEmail } = require('../validation');
+const { maskEmail } = require('../services/support');
+const {
+  ZONE_MAX,
+  validTimeZone,
+  supportedTimeZones,
+  formatInZone,
+  savedTimeZone,
+  effectiveTimeZone,
+  serverDefaultTimeZone,
+  saveTimeZone,
+  clearTimeZone,
+} = require('../timeZone');
 
 /**
  * Guardian controls. Dev (development only) may VIEW a reduced dashboard but
@@ -17,7 +29,7 @@ const { str, strList, validateEmail } = require('../validation');
  *   codes, add someone to a group, change a role, erase the archive.
  */
 module.exports = function adminRoutes(ctx) {
-  const { store, config, governance, actions, media, notifier, requireStepUp } = ctx;
+  const { store, config, governance, actions, media, notifier, requireStepUp, limiters } = ctx;
   const router = createRouter();
 
   function flashOutcome(req, outcome, pendingMessage) {
@@ -59,6 +71,19 @@ module.exports = function adminRoutes(ctx) {
     const reportsWithComment = await Promise.all(
       reports.map(async (r) => ({ ...r, comment: r.commentId ? await store.findCommentById(r.commentId) : null }))
     );
+    // Family settings card (guardians only). The example is a fresh invite
+    // code's expiry, written the way the email will write it.
+    const effectiveZone = await effectiveTimeZone(store, config);
+    const zoneSettings = can.manageMembers
+      ? {
+          saved: effectiveZone.source === 'family' ? effectiveZone.zone : null,
+          effective: effectiveZone,
+          serverDefault: serverDefaultTimeZone(config),
+          zones: supportedTimeZones(),
+          exampleAt: now + config.security.accessCodeTtlMs,
+          example: formatInZone(now + config.security.accessCodeTtlMs, effectiveZone.zone),
+        }
+      : null;
 
     res.render('admin', {
       title: 'Admin',
@@ -91,12 +116,61 @@ module.exports = function adminRoutes(ctx) {
       reports: reportsWithComment,
       currentUserId: req.user.id,
       codeTtlHours: Math.round(config.security.accessCodeTtlMs / 3600000),
+      emailAvailable: notifier.emailAvailable(),
+      guardianCount: users.filter((u) => u.role === ROLES.PARENT && !u.disabled).length,
+      soloDelayHours: Math.round(config.governance.soloDelayMs / 3600000),
+      zoneSettings,
+      // Pending "Takes effect after" times, in the family's zone.
+      formatTime: (iso) => formatInZone(iso, effectiveZone.zone),
     });
+  });
+
+  // --- Family settings: time zone for emails ---
+
+  // Any one guardian, at once. Deliberately NOT governed (no two-guardian
+  // approval or solo delay): the zone only changes how times are written in
+  // emails (always with the zone named), so it widens nobody's access to
+  // anything. It is still audit-logged and every guardian can see it.
+  router.post('/admin/settings/time-zone', requireParent, limiters.settingsLimiter, async (req, res) => {
+    const back = '/admin#family-settings';
+    const before = await savedTimeZone(store);
+    const raw = str(req.body.timeZone, { field: 'timeZone', max: 200 });
+    let after = null;
+    if (raw) {
+      after = validTimeZone(raw);
+      if (!after) {
+        req.flash('error', `"${raw.slice(0, ZONE_MAX)}" is not a time zone this server knows. Pick one from the list, for example America/New_York.`);
+        return res.redirect(back);
+      }
+    }
+    const from = before ? before.zone : null;
+    if (from === after) {
+      req.flash('success', 'Time zone saved (nothing changed).');
+      return res.redirect(back);
+    }
+    if (after) {
+      await saveTimeZone(store, after, { updatedBy: req.user.id });
+    } else {
+      await clearTimeZone(store);
+    }
+    await audit(store, req, 'settings.time_zone', { targetType: 'site', details: { from, to: after } });
+    const effective = await effectiveTimeZone(store, config);
+    req.flash(
+      'success',
+      after
+        ? `Time zone set to ${after}. Emails now show times in it.`
+        : `Time zone cleared. Emails now use the server default, ${effective.zone}.`
+    );
+    return res.redirect(back);
   });
 
   // --- Invite codes ---
 
-  router.post('/admin/access-codes', requireParent, requireStepUp, async (req, res) => {
+  // Rate-limit only the requests that actually ask for an email.
+  const limitInviteEmails = (req, res, next) =>
+    str(req.body.sendEmail) === 'on' ? limiters.inviteEmailLimiter(req, res, next) : next();
+
+  router.post('/admin/access-codes', requireParent, requireStepUp, limitInviteEmails, async (req, res) => {
     const note = str(req.body.note, { field: 'note', max: 200 });
     const groupId = str(req.body.groupId, { field: 'groupId' }) || null;
     const rawEmail = str(req.body.intendedEmail, { field: 'intendedEmail', max: 254 });
@@ -109,14 +183,73 @@ module.exports = function adminRoutes(ctx) {
       }
       intendedEmail = check.value.toLowerCase();
     }
+    const wantsEmail = str(req.body.sendEmail) === 'on';
+    if (wantsEmail && !intendedEmail) {
+      req.flash('error', 'Add their email address to send them the code.');
+      return res.redirect('/admin');
+    }
+    // Without working email the code is still created and shown here.
+    const sendEmail = wantsEmail && notifier.emailAvailable();
+    const firstName = sendEmail ? str(req.body.firstName, { field: 'firstName', max: 60 }) : '';
+    // The summary lands in the audit trail and guardian emails, so it names
+    // the address only masked; the admin page shows it in full from payload.
+    const summary =
+      `Create an invite code${note ? ` for "${note}"` : ''}` +
+      (sendEmail ? ` and email it to ${maskEmail(intendedEmail)}` : intendedEmail ? ' (bound to one email)' : '');
     const outcome = await governance.requestAction(req, {
       type: 'accessCode.create',
-      payload: { note, groupId, intendedEmail },
-      summary: `Create an invite code${note ? ` for "${note}"` : ''}${intendedEmail ? ' (bound to one email)' : ''}`,
+      payload: { note, groupId, intendedEmail, sendEmail, firstName },
+      summary,
     });
-    flashOutcome(req, outcome, 'Inviting a new member needs the other guardian, so the request is waiting for approval.');
+    flashOutcome(
+      req,
+      outcome,
+      'Inviting a new member needs the other guardian, so the request is waiting for approval.' +
+        (sendEmail ? ' The code will be emailed to them once it is created.' : '')
+    );
+    if (wantsEmail && !sendEmail) {
+      req.flash('error', 'Email is not set up on this server, so the code was not emailed. Share it with them yourself.');
+    }
     return res.redirect('/admin');
   });
+
+  // Email an existing open code. Codes are kept (and shown to guardians)
+  // until used, so this sends the same code the table already shows.
+  router.post(
+    '/admin/access-codes/:code/email',
+    requireParent,
+    requireStepUp,
+    limiters.inviteEmailLimiter,
+    async (req, res) => {
+      const ac = await store.findAccessCode(req.params.code);
+      const open = ac && !ac.usedBy && !ac.revokedAt && !(ac.expiresAt && Date.parse(ac.expiresAt) <= Date.now());
+      if (!open) {
+        req.flash('error', 'Only an open code can be emailed.');
+        return res.redirect('/admin');
+      }
+      let to = ac.intendedEmail;
+      if (!to) {
+        const check = validateEmail(str(req.body.email, { field: 'email', max: 254 }));
+        if (!check.ok) {
+          req.flash('error', check.error);
+          return res.redirect('/admin');
+        }
+        to = check.value.toLowerCase();
+      }
+      const sent = await actions.emailInviteCode(ac, { to, sentBy: req.user.id, req });
+      if (sent.ok) {
+        req.flash('success', `Invite code emailed to ${sent.masked}.`);
+      } else {
+        req.flash(
+          'error',
+          sent.reason === 'not_configured'
+            ? 'Email is not set up on this server. Share the code with them yourself.'
+            : 'The email could not be sent. Try again later, or share the code yourself.'
+        );
+      }
+      return res.redirect('/admin');
+    }
+  );
 
   router.post('/admin/access-codes/:code/revoke', requireParent, async (req, res) => {
     const revoked = await store.revokeAccessCode(req.params.code, req.user.id);

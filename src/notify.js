@@ -39,17 +39,21 @@ function createNotifier({ transport = config.notifications.transport, createTran
   function markFailed(err) {
     state.email = 'failing';
     state.lastFailureAt = new Date().toISOString();
-    logger.error({ err: { message: String(err && err.message).slice(0, 200) } }, 'email delivery failing');
+    // SMTP errors often quote the recipient ("550 <x@y>: rejected"): mask it.
+    const message = String(err && err.message)
+      .replace(/[^\s<>@"']+@[^\s<>@"']+/g, '[address]')
+      .slice(0, 200);
+    logger.error({ err: { message } }, 'email delivery failing');
   }
 
-  async function deliver(to, subject, text) {
+  async function deliver(to, subject, text, html) {
     if (transport === 'memory') {
-      sent.push({ to, subject, text, at: new Date().toISOString() });
+      sent.push({ to, subject, text, ...(html ? { html } : {}), at: new Date().toISOString() });
       return;
     }
     if (transport === 'smtp') {
       try {
-        await getMailer().sendMail({ from: config.notifications.from, to, subject, text });
+        await getMailer().sendMail({ from: config.notifications.from, to, subject, text, ...(html ? { html } : {}) });
         state.email = 'ok';
       } catch (err) {
         markFailed(err);
@@ -106,7 +110,27 @@ function createNotifier({ transport = config.notifications.transport, createTran
     }
   }
 
-  return { notifyGuardians, notifyUser, verify, status, sent };
+  /**
+   * Whether mail actually leaves the server. The console transport only logs
+   * a line, so anything that must reach a person (an invite code) is not
+   * sent through it.
+   */
+  function emailAvailable() {
+    return transport === 'memory' || (transport === 'smtp' && Boolean(config.notifications.smtpUrl));
+  }
+
+  /**
+   * Send one message to someone who is not (yet) a member, e.g. an invite.
+   * No "[App]" subject prefix. Throws on failure so the caller can report it.
+   */
+  async function sendEmail({ to, subject, text, html }) {
+    if (!emailAvailable()) {
+      throw new Error('email is not configured');
+    }
+    await deliver(to, subject, text, html);
+  }
+
+  return { notifyGuardians, notifyUser, sendEmail, emailAvailable, verify, status, sent };
 }
 
 module.exports = { createNotifier };

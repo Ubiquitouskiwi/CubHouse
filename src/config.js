@@ -1,6 +1,7 @@
 'use strict';
 
 require('dotenv').config();
+const { validTimeZone } = require('./timeZone');
 
 /**
  * Environment configuration.
@@ -43,6 +44,11 @@ const config = {
     slug: /^[a-z0-9-]{1,40}$/.test(env.APP_SLUG || '') ? env.APP_SLUG : 'family-photos',
     // One line shown in every page footer.
     footerText: env.APP_FOOTER_TEXT || 'Our little family den. Please keep access codes and photos between us.',
+    // DEFAULT IANA time zone for times written into emails (an email cannot
+    // know the reader's zone), e.g. America/New_York. A guardian's choice in
+    // Admin, Family settings wins over it; null (unset or not a zone Intl
+    // accepts) means UTC. See src/timeZone.js.
+    timeZone: validTimeZone(env.APP_TIME_ZONE),
   },
   isProduction,
   isTest,

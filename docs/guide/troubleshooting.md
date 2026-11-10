@@ -16,6 +16,14 @@ If they land in spam or junk:
 Guardians: if nobody gets emails at all, tell whoever runs the server. The site checks its email
 connection when it starts and every 6 hours, and reports a problem on its `/readyz` status page.
 
+## Times in emails look wrong
+
+An invite email says the code expires at an odd hour, or a "takes effect" time is hours off. Emails
+write times in the family time zone, with the zone named (for example `EST` or `UTC`). If that zone
+is not yours, a guardian sets it on the Admin page under **Family settings**, **Time zone for
+emails**. See [Family settings](guardians.md#family-settings-time-zone-for-emails). Emails already
+sent keep the old time; new ones use the new zone.
+
 ## "This page isn't working... redirected you too many times" on first sign-in
 
 This happened on an older version of Cubhouse, when an account had to choose a new password at

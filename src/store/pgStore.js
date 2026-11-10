@@ -9,8 +9,8 @@ const { newVideoJob, applyJobChanges, planClaim } = require('./videoJobs');
 /**
  * PostgreSQL data store for production. Same async interface and the same
  * behavior as MemoryStore (the whole test suite runs against both; see
- * test/storeFactory.js). Schema: deploy/sql/001_security.sql and
- * deploy/sql/002_data_store.sql.
+ * test/storeFactory.js). Schema: deploy/sql/001_security.sql,
+ * deploy/sql/002_data_store.sql and the later numbered files.
  *
  * Each entity is one row with a JSON document shaped exactly like the
  * MemoryStore object, plus indexed columns where a unique constraint or a
@@ -996,6 +996,27 @@ class PgStore {
       value,
     ]);
     return this.getSetting(key);
+  }
+
+  // --- Site settings (editable JSON values, e.g. the family time zone; 005_site_settings.sql) ---
+
+  async getSiteSetting(key) {
+    const { rows } = await this.pool.query('SELECT value FROM app_site_settings WHERE key = $1', [key]);
+    return rows.length ? rows[0].value : null;
+  }
+
+  async putSiteSetting(key, value) {
+    await this.pool.query(
+      `INSERT INTO app_site_settings (key, value, updated_at) VALUES ($1, $2, now())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+      [key, value]
+    );
+    return value;
+  }
+
+  async deleteSiteSetting(key) {
+    const { rowCount } = await this.pool.query('DELETE FROM app_site_settings WHERE key = $1', [key]);
+    return rowCount > 0;
   }
 
   // --- Auth failure states ---

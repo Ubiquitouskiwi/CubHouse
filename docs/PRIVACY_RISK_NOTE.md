@@ -52,7 +52,7 @@ device metadata (stripped at upload).
 | Processor | Role | Location / region | DPA |
 |---|---|---|---|
 | DigitalOcean | Droplet, Managed Postgres, Spaces | (fill in region) | Accepted (date) |
-| Email provider | Guardian notifications | (fill in) | (date) |
+| Email provider | Guardian notifications; invite emails (the invitee's address, the invite code, the inviting guardian's display name) | (fill in) | (date) |
 
 ## Main risks and controls
 

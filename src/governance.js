@@ -2,6 +2,7 @@
 
 const { audit } = require('./audit');
 const { logger, errorFields } = require('./logger');
+const { effectiveTimeZone, formatInZone } = require('./timeZone');
 
 /**
  * Two-guardian governance.
@@ -72,10 +73,11 @@ function createGovernance({ store, config, notifier, executors }) {
       targetId: request.id,
       details: { type, summary, solo },
     });
+    const takesEffect = solo ? formatInZone(request.executeAfter, (await effectiveTimeZone(store, config)).zone) : null;
     await notifier.notifyGuardians(store, {
       subject: solo ? 'A protected change is scheduled' : 'A change needs your approval',
       text: solo
-        ? `A protected change was requested: "${summary}". It will take effect after the safety delay unless cancelled.`
+        ? `A protected change was requested: "${summary}". It will take effect after the safety delay (${takesEffect}) unless cancelled.`
         : `Another guardian asked to: "${summary}". Sign in to approve or decline it.`,
       excludeUserId: solo ? undefined : requestedBy,
     });

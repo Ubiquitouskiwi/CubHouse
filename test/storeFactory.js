@@ -29,6 +29,7 @@ const PG_TABLES = [
   'app_governance_requests',
   'app_reset_codes',
   'app_settings',
+  'app_site_settings',
   'app_auth_failures',
   'app_sessions',
   'app_rate_limits',
