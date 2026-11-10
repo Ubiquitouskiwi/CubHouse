@@ -143,7 +143,8 @@ stk env family-photos SEED_ADMIN_EMAIL=<first guardian email> SEED_ADMIN_PASSWOR
 stk env family-photos              # check: values are redacted
 ```
 
-Optional: `APP_SLUG`, `APP_FOOTER_TEXT`, and the policy knobs in [.env.example](../.env.example).
+Optional: `APP_SLUG`, `APP_FOOTER_TEXT`, `APP_TIME_ZONE` (an IANA zone such as `America/New_York`
+for times written into emails, like the invite code's expiry; default UTC), and the policy knobs in [.env.example](../.env.example).
 StarlingTek provides `PORT`, `NODE_ENV=production`, `STK_PROJECT`, `STK_SHA` and `STK_DATA_DIR`
 itself; do not set them. Keep `SEED_ADMIN_PASSWORD` set and strong after the first sign-in: safe
 boot checks it on every start, and it is only ever used for an empty database.

@@ -108,6 +108,7 @@ function createActions({ store, media, config, notifier }) {
       inviterName: inviter ? inviter.displayName : null,
       firstName,
       expiresAt: accessCode.expiresAt,
+      timeZone: config.app.timeZone,
     });
     try {
       await notifier.sendEmail({ to, subject: message.subject, text: message.text, html: message.html });

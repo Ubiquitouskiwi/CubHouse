@@ -65,24 +65,36 @@ function oneLine(value, max = 80) {
     .slice(0, max);
 }
 
-/** "Fri 13 Nov, 21:37 UTC" plus a rough "in about 3 days". */
-function describeExpiry(expiresAt, now = Date.now()) {
+/**
+ * "Fri, Nov 13, 2026, 4:46 PM EST" in the family's time zone (APP_TIME_ZONE),
+ * plus a rough "about 3 days". An email cannot know the reader's own zone, so
+ * the zone is always named.
+ */
+function describeExpiry(expiresAt, now = Date.now(), timeZone = 'UTC') {
   const at = Date.parse(expiresAt || '');
   if (!Number.isFinite(at)) {
     return null;
   }
-  const when = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'UTC',
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(at));
+  const format = (zone) =>
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    }).format(new Date(at));
+  let when;
+  try {
+    when = format(timeZone || 'UTC');
+  } catch {
+    when = format('UTC');
+  }
   const hours = Math.max(1, Math.round((at - now) / 3600000));
   const rough = hours >= 48 ? `about ${Math.round(hours / 24)} days` : `about ${hours} hour${hours === 1 ? '' : 's'}`;
-  return { when: `${when} UTC`, rough };
+  return { when, rough };
 }
 
 /**
@@ -94,13 +106,13 @@ function joinLink(origin, code) {
   return `${String(origin).replace(/\/+$/, '')}/register#code=${encodeURIComponent(code)}`;
 }
 
-function buildInviteEmail({ appName, origin, code, inviterName, firstName, expiresAt, now = Date.now() }) {
+function buildInviteEmail({ appName, origin, code, inviterName, firstName, expiresAt, timeZone = 'UTC', now = Date.now() }) {
   const app = oneLine(appName, 60) || 'Cubhouse';
   const inviter = oneLine(inviterName, 80) || 'A guardian';
   const name = oneLine(firstName, 60);
   const link = joinLink(origin, code);
   const registerUrl = `${String(origin).replace(/\/+$/, '')}/register`;
-  const expiry = describeExpiry(expiresAt, now);
+  const expiry = describeExpiry(expiresAt, now, timeZone);
   const subject = `You're invited to join ${app}`;
 
   const greeting = name ? `Hi ${name},` : 'Hi there,';

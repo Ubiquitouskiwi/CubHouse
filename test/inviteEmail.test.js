@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const config = require('../src/config');
 const { startApp, seedFamily } = require('./helpers');
 const { createNotifier } = require('../src/notify');
-const { buildInviteEmail, joinLink } = require('../src/services/inviteEmail');
+const { buildInviteEmail, joinLink, describeExpiry } = require('../src/services/inviteEmail');
 const { INVITE_EMAILS_PER_HOUR } = require('../src/security/rateLimiters');
 
 const INVITEE = 'grandpa@test.com';
@@ -261,4 +261,26 @@ test('a failed send is reported and the code stays', async (t) => {
   assert.match((await p.get('/admin')).body, /could not be emailed \(sending failed\)/);
   const failed = (await env.store.listSecurityAuditEvents()).find((e) => e.type === 'invite.email_failed');
   assert.equal(failed.details.to, MASKED);
+});
+
+test('invite email: the expiry is written in the family time zone, with the zone named', () => {
+  const expiresAt = '2026-11-13T21:46:00.000Z';
+  const now = Date.parse('2026-11-10T21:46:00.000Z');
+  const ny = describeExpiry(expiresAt, now, 'America/New_York');
+  assert.equal(ny.when, 'Fri, Nov 13, 2026, 4:46 PM EST');
+  assert.equal(ny.rough, 'about 3 days');
+  assert.equal(describeExpiry(expiresAt, now, 'UTC').when, 'Fri, Nov 13, 2026, 9:46 PM UTC');
+  // A bad zone never breaks the email: it falls back to UTC.
+  assert.equal(describeExpiry(expiresAt, now, 'Not/AZone').when, 'Fri, Nov 13, 2026, 9:46 PM UTC');
+  const msg = buildInviteEmail({
+    appName: 'Cubhouse',
+    origin: 'https://photos.example.org',
+    code: 'INVITE-ABCD-EFGH-JKLM',
+    expiresAt,
+    timeZone: 'America/New_York',
+    now,
+  });
+  for (const body of [msg.html, msg.text]) {
+    assert.ok(body.includes('4:46 PM EST'), 'local expiry missing');
+  }
 });
