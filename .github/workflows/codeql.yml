@@ -1,9 +1,13 @@
 name: CodeQL
 
+# production's ruleset blocks updates while code scanning has an open alert of
+# high severity or higher, and promote.yml checks the same before it pushes.
+# The weekly schedule runs on the default branch (beta).
 on:
   push:
-    branches: [main]
+    branches: [beta, production]
   pull_request:
+    branches: [beta, production]
   schedule:
     - cron: '23 6 * * 1'
 

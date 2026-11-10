@@ -1,0 +1,143 @@
+name: Promote beta -> production
+
+# Promotes beta to production by fast-forward. StarlingTek deploys whatever
+# production points at, so a successful run here is a production deploy.
+#
+# The human gate is the feature -> beta pull request (the beta ruleset requires
+# a PR and the CI checks). Promotion is a deliberate, low-frequency act: click
+# the button, or let the monthly run sweep whatever has accumulated on beta.
+# production never gets a commit of its own, so it stays an ancestor of beta.
+#
+# Order: run the full CI gate (ci.yml) on the exact beta commit this run started
+# on, check that commit's CI and code scanning state, then fast-forward
+# production to THAT commit (not to whatever beta points at by then). See
+# docs/WORKFLOWS.md for setup and for fixing a failed run.
+on:
+  workflow_dispatch: {}  # the button: Actions -> "Promote beta -> production" -> Run workflow (on beta)
+  schedule:
+    # Monthly, the 1st at 15:00 UTC, the same cadence as the StarlingTek repo.
+    # A no-op when production already equals beta. GitHub runs cron best-effort.
+    - cron: '0 15 1 * *'
+
+# One promotion at a time; never cancel one half way.
+concurrency:
+  group: promote-production
+  cancel-in-progress: false
+
+# Nothing by default; each job asks for what it needs.
+permissions: {}
+
+jobs:
+  branch:
+    name: Started from beta
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Refuse any other branch
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/beta" ]; then
+            echo "::error title=Wrong branch::Promote must run on beta (it was started on $GITHUB_REF). In Actions, pick 'Use workflow from: beta'."
+            exit 1
+          fi
+
+  gate:
+    name: Gate
+    needs: branch
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+    secrets:
+      FORBIDDEN_NAMES: ${{ secrets.FORBIDDEN_NAMES }}
+
+  promote:
+    name: Fast-forward production to beta
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # GITHUB_TOKEN only reads (CI runs, code scanning alerts, the repository).
+    # The push uses PROMOTE_TOKEN; a GITHUB_TOKEN push could not bypass the
+    # production ruleset.
+    permissions:
+      actions: read
+      contents: read
+      security-events: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0  # every branch with full history, for the ancestor checks
+          persist-credentials: false
+
+      - name: Check the commit, then fast-forward production
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROMOTE_TOKEN: ${{ secrets.PROMOTE_TOKEN }}
+        run: |
+          set -euo pipefail
+          sha="$GITHUB_SHA"  # the beta commit the gate just tested
+          short="${sha::7}"
+
+          if [ -z "${PROMOTE_TOKEN:-}" ]; then
+            echo "::error title=PROMOTE_TOKEN missing::The PROMOTE_TOKEN repository secret is not set. See docs/WORKFLOWS.md, 'One-time setup'."
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$sha" origin/beta; then
+            echo "::error title=Commit left beta::$short is no longer on beta. Re-run Promote."
+            exit 1
+          fi
+
+          # production must be an ancestor of the tested commit, or a
+          # fast-forward is impossible and a person needs to look.
+          if ! git merge-base --is-ancestor origin/production "$sha"; then
+            echo "::error title=production is not an ancestor of beta::production has commits that beta does not, so it cannot be fast-forwarded."
+            if git merge-base --is-ancestor "$sha" origin/production; then
+              echo "beta is behind production: something landed on production directly."
+            else
+              echo "beta and production have diverged: each has commits the other lacks."
+            fi
+            echo "Fix: bring production's commits into beta with a merge commit, then re-run Promote:"
+            echo "  git fetch origin"
+            echo "  git switch -c fix/sync-production origin/beta"
+            echo "  git merge origin/production    # resolve any conflicts"
+            echo "  git push origin fix/sync-production"
+            echo "Open a pull request into beta and merge it with 'Create a merge commit'."
+            echo "Squash or rebase would leave production's commits out of beta's history."
+            echo "To stop it recurring: merge pull requests into beta, never production."
+            exit 1
+          fi
+
+          if git merge-base --is-ancestor "$sha" origin/production; then
+            echo "production already contains $short. Nothing to promote."
+            exit 0
+          fi
+
+          # A passing CI run for this commit on its push to beta. The gate above
+          # already passed; this also catches a commit whose own CI failed.
+          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&event=push&status=success&per_page=1" --jq '.total_count')"
+          if [ "$passed" -lt 1 ]; then
+            echo "::error title=No passing CI run::$short has no successful CI run from its push to beta. Wait for CI on beta to pass (or re-run it), then re-run Promote."
+            exit 1
+          fi
+
+          # The production ruleset blocks updates while code scanning has an open
+          # alert of high severity or higher, but PROMOTE_TOKEN's owner bypasses
+          # that rule, so check it here. Fails closed if the alerts can't be read.
+          if ! counts="$(gh api --paginate "repos/$GITHUB_REPOSITORY/code-scanning/alerts?ref=refs/heads/beta&state=open&per_page=100" \
+              --jq '[.[] | select(.rule.security_severity_level == "high" or .rule.security_severity_level == "critical")] | length')"; then
+            echo "::error title=Code scanning unreadable::Could not read code scanning alerts for beta. Check that CodeQL has run on beta (Security -> Code scanning), then re-run Promote."
+            exit 1
+          fi
+          high="$(echo "$counts" | awk '{ n += $1 } END { print n + 0 }')"
+          if [ "$high" -gt 0 ]; then
+            echo "::error title=Open code scanning alerts::beta has $high open code scanning alert(s) of high severity or higher. Fix or dismiss them (Security -> Code scanning), then re-run Promote."
+            exit 1
+          fi
+
+          # A plain (non-force) push of the tested commit: GitHub refuses it if
+          # production moved meanwhile. The token reaches git only through a
+          # credential helper reading the environment, never a URL, a command
+          # line, .git/config or the log.
+          helper='!f() { echo username=x-access-token; echo "password=${PROMOTE_TOKEN}"; }; f'
+          git -c credential.helper= -c credential.helper="$helper" \
+            push --quiet origin "$sha:refs/heads/production"
+          echo "Promoted production to $short. StarlingTek deploys it on its next poll (or at once with the webhook)."

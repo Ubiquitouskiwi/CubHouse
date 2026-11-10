@@ -1,11 +1,12 @@
 name: Dependency review
 
-# Runs on every pull request. Fails when a change adds a dependency with a known vulnerability of
+# Runs on every pull request into beta or production. Fails when a change adds a dependency with a known vulnerability of
 # moderate severity or higher, or with a license that does not fit an AGPL-3.0 project. It reads
 # only the lockfile diff; nothing is installed or run.
 
 on:
   pull_request:
+    branches: [beta, production]
 
 permissions:
   contents: read

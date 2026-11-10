@@ -9,7 +9,7 @@ name: Wiki sync
 
 on:
   push:
-    branches: [main]
+    branches: [beta]
     paths:
       - 'docs/guide/**'
       - '.github/workflows/wiki-sync.yml'
@@ -29,6 +29,8 @@ jobs:
     name: Publish the user guide to the wiki
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Publish only reviewed docs: the button started from a feature branch is skipped.
+    if: github.ref == 'refs/heads/beta'
     # Note: the `runner` context is not available in job-level `env`, so the wiki
     # path is derived from $RUNNER_TEMP inside each step instead.
     steps:

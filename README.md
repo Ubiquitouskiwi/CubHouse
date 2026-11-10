@@ -10,9 +10,9 @@
      .github/ISSUE_TEMPLATE/config.yml with the real repository (git grep -n OWNER/REPO). -->
 Each deployment can show its own site name: set `APP_NAME` (it defaults to "Cubhouse").
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
-[![Secret scan](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml/badge.svg?branch=main)](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml)
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
+[![Secret scan](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/OWNER/REPO/badge)](https://scorecard.dev/viewer/?uri=github.com/OWNER/REPO)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 ![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange.svg)
@@ -90,7 +90,7 @@ It covers signing in and two-step verification, what family members can do, the 
 controls, two-guardian approval, account recovery, data export and erasure, and troubleshooting.
 
 The repository's [wiki](https://github.com/Ubiquitouskiwi/CubHouse/wiki) is generated from
-`docs/guide` by `.github/workflows/wiki-sync.yml` on every change to `main`. Edit `docs/guide`,
+`docs/guide` by `.github/workflows/wiki-sync.yml` on every change to `beta`. Edit `docs/guide`,
 never the wiki: wiki edits are overwritten on the next sync.
 
 ## Quick start (development, no cost, no secrets)

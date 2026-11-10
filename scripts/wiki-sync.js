@@ -8,7 +8,7 @@
  *
  * - Pages get fixed wiki names (index.md is Home.md, faq.md is FAQ.md, ...).
  * - Links between guide pages become wiki page links; links that leave
- *   docs/guide become https://github.com/<repo>/blob/main/... URLs.
+ *   docs/guide become https://github.com/<repo>/blob/beta/... URLs (beta is the default branch).
  * - docs/guide/img/** is copied to img/** in the wiki. Wiki pages do not
  *   resolve relative image paths in Markdown reliably, so images point at the
  *   wiki's raw URL instead.
@@ -126,7 +126,7 @@ function rewriteTarget(target, { file, repo, guideRel }) {
     // one would need the images hosted another way.
     return `https://raw.githubusercontent.com/wiki/${repo}/${guidePath}${frag}`;
   }
-  return `https://github.com/${repo}/blob/main/${repoPath}${frag}`;
+  return `https://github.com/${repo}/blob/beta/${repoPath}${frag}`;
 }
 
 function listFiles(dir, base = dir) {
