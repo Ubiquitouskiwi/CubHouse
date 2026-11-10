@@ -181,18 +181,33 @@
                             shows up for everyone it is shared with.
                           </p>
                           <% } %>
+                            <%# Without JavaScript this posts one photo. photo-upload.js turns it into a
+                              multi-photo uploader: drag and drop, a per-photo status list, and a summary. %>
                             <form method="post" action="/photos/upload" class="upload-form" data-upload-form
-                              enctype="multipart/form-data">
+                              enctype="multipart/form-data"
+                              data-max-bytes="<%= uploadLimits.maxBytes %>"
+                              data-per-hour="<%= uploadLimits.perHour %>"
+                              data-uploader-role="<%= photoCan.setPermissions ? 'parent' : 'member' %>">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                                <div class="upload-row">
+                                <div class="upload-drop" data-upload-drop>
                                   <label class="upload-file">
-                                    <span class="upload-file-label">Choose a photo</span>
+                                    <span class="upload-file-label" data-upload-pick-label>Choose a photo</span>
                                     <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/avif"
-                                      data-upload-input required />
+                                      data-upload-input required aria-describedby="upload-limits" />
                                   </label>
+                                  <span class="upload-drop-text" data-upload-drop-text hidden>or drag photos here</span>
+                                </div>
+                                <p class="upload-hint muted" id="upload-limits">
+                                  Photos only: JPEG, PNG, WebP, or AVIF, up to
+                                  <%= Math.round(uploadLimits.maxBytes / (1024 * 1024)) %> MB each.
+                                  <span data-upload-multi-hint hidden>Pick as many as you like (about
+                                    <%= uploadLimits.perHour %> an hour).</span>
+                                  Videos and iPhone HEIC files cannot be uploaded yet.
+                                </p>
+                                <div class="upload-row">
                                   <label class="upload-caption">
                                     <span class="sr-only">Caption</span>
-                                    <input type="text" name="caption" maxlength="200"
+                                    <input type="text" name="caption" maxlength="200" data-upload-caption
                                       placeholder="Add a caption (optional)" />
                                   </label>
                                 </div>
@@ -210,8 +225,29 @@
                                 <div class="upload-preview" data-upload-preview hidden>
                                   <img data-upload-preview-img alt="Selected photo preview" />
                                 </div>
-                                <p class="upload-hint muted">JPEG, PNG, WebP, or AVIF, up to 15 MB. Captions: please skip full names, schools, and addresses.</p>
-                                <button type="submit" class="primary-button" data-upload-submit disabled>
+                                <p class="upload-hint muted" data-upload-status>Captions: please skip full names, schools, and addresses.</p>
+
+                                <div class="upload-queue" data-upload-queue hidden>
+                                  <div class="upload-overall">
+                                    <p class="upload-overall-text" data-upload-overall></p>
+                                    <progress class="upload-overall-bar" data-upload-progress max="100" value="0"
+                                      aria-label="Overall upload progress"></progress>
+                                    <p class="upload-keep-open muted" data-upload-keep-open hidden>
+                                      Keep this page open until the uploads finish.
+                                    </p>
+                                  </div>
+                                  <div class="upload-summary" data-upload-summary tabindex="-1" hidden></div>
+                                  <div class="upload-queue-actions">
+                                    <button type="button" class="btn-sm" data-upload-retry-all hidden>Retry failed</button>
+                                    <button type="button" class="btn-sm" data-upload-cancel-all hidden>Cancel all</button>
+                                    <button type="button" class="btn-sm" data-upload-clear hidden>Clear the list</button>
+                                  </div>
+                                  <ul class="upload-list" data-upload-list aria-label="Photos to upload"></ul>
+                                </div>
+                                <p class="sr-only" aria-live="polite" data-upload-live></p>
+
+                                <button type="submit" class="primary-button" data-upload-submit disabled
+                                  data-label-one="<%= photoCan.setPermissions ? 'Upload photo' : 'Send to parents' %>">
                                   <%= photoCan.setPermissions ? 'Upload photo' : 'Send to parents' %>
                                 </button>
                             </form>
@@ -221,7 +257,7 @@
                       <%# --- The viewer's own recent contributions, with approval status. Shown to non-parents (parents
                         see the queue above instead). --- %>
                         <% if (!photoCan.setPermissions && myUploads && myUploads.length> 0) { %>
-                          <section class="card card-trail home-contributions">
+                          <section class="card card-trail home-contributions" id="my-uploads">
                             <h2>Photos you sent in</h2>
                             <p class="muted">
                               Pictures you shared with the family. Pending ones are waiting on a

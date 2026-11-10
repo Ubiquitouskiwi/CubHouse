@@ -2243,3 +2243,255 @@ button.reaction-chip:hover {
   width: 9rem;
   height: 0.8rem;
 }
+
+/* --- Bulk upload (photo-upload.js). States always carry text and an icon,
+   never color alone. --- */
+.upload-drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-top: 0.4rem;
+}
+
+.upload-enhanced .upload-drop {
+  justify-content: center;
+  padding: 1.1rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.upload-enhanced .upload-drop.is-dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* The native input stays in the page (keyboard and screen readers use it);
+   the label is the visible, finger-sized button. */
+.upload-enhanced .upload-file {
+  position: relative;
+}
+
+.upload-enhanced .upload-file input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.upload-enhanced .upload-file-label {
+  display: inline-block;
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.upload-enhanced .upload-file:focus-within .upload-file-label {
+  outline: 3px solid var(--honey);
+  outline-offset: 2px;
+}
+
+.upload-drop-text {
+  color: var(--muted);
+}
+
+.upload-queue {
+  margin: 0.8rem 0;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.upload-overall-text {
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+
+.upload-overall-bar,
+.upload-item-bar {
+  width: 100%;
+  height: 0.7rem;
+  accent-color: var(--accent);
+}
+
+.upload-keep-open {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+}
+
+.upload-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+
+.upload-queue-actions:empty {
+  display: none;
+}
+
+.upload-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.upload-item {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.55rem 0.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.upload-item:first-child {
+  border-top: 0;
+}
+
+.upload-item:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.upload-item-thumb {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.upload-item-thumb-blank {
+  display: block;
+}
+
+.upload-item-main {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.upload-item-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-item-size {
+  font-size: 0.8rem;
+}
+
+.upload-item-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.upload-item-icon::before {
+  display: inline-block;
+  width: 1.1rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.is-queued .upload-item-icon::before { content: '\2022'; color: var(--muted); }
+.is-uploading .upload-item-icon::before { content: '\2191'; color: var(--accent); }
+.is-processing .upload-item-icon::before { content: '\21BB'; color: var(--accent); }
+.is-done .upload-item-icon::before { content: '\2713'; color: var(--success-text); }
+.is-failed .upload-item-icon::before { content: '!'; color: var(--error-text); }
+.is-cancelled .upload-item-icon::before,
+.is-skipped .upload-item-icon::before { content: '\2013'; color: var(--muted); }
+
+.is-done .upload-item-state { color: var(--success-text); }
+.is-failed .upload-item-state { color: var(--error-text); font-weight: 600; }
+
+.upload-item-reason {
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--error-text);
+}
+
+.is-skipped .upload-item-reason {
+  color: var(--muted);
+}
+
+.upload-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.upload-item-actions .btn-sm {
+  min-height: 36px;
+  text-decoration: none;
+}
+
+.upload-summary {
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border-left: 5px solid var(--accent);
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+
+.upload-summary p {
+  margin: 0 0 0.4rem;
+}
+
+.upload-summary-headline {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.upload-summary-mixed,
+.upload-summary-error {
+  border-left-color: var(--error-text);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
+.upload-summary .primary-button {
+  display: inline-block;
+  margin-top: 0.2rem;
+}
+
+/* Phones: stack the actions under the file name so buttons stay tappable. */
+@media (max-width: 520px) {
+  .upload-item {
+    grid-template-columns: 2.6rem 1fr;
+  }
+
+  .upload-item-thumb {
+    width: 2.6rem;
+    height: 2.6rem;
+  }
+
+  .upload-item-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .upload-drop-text {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .upload-drop-text {
+    display: none;
+  }
+}

@@ -163,13 +163,22 @@ If a guardian stops sharing a photo with you, it disappears from your albums too
 You can share your own pictures with the family. The guardians check each one first.
 
 1. Go to **Home**.
-2. In **Add a photo**, select **Choose a photo**.
-3. Add a caption if you like (skip full names, schools and addresses).
-4. Select **Send to parents**.
+2. In **Add a photo**, select **Choose photos**. On a phone this opens your photo library, where you
+   can pick several at once. On a computer you can also drag photos onto the box.
+3. Add a caption if you like. It goes on every photo you picked. Skip full names, schools and
+   addresses.
+4. Select **Send to parents**. Keep the page open until it says **Finished**.
 
-![The Add a photo form with a Send to parents button, and a Photos you sent in list showing Kite flying as Pending approval](img/member-contribute.png)
+![On a phone: a summary reading 4 photos sent, 1 failed with a See the photos you sent in button, and a video at the top of the list marked Failed, This is a video](img/member-contribute.png)
 
-- JPEG, PNG, WebP or AVIF, up to 15 MB. iPhone photos may need a setting change; see
+- Each photo shows where it is: **Waiting**, **Uploading** with a percentage, **Saving**, then
+  **Sent for approval** or **Failed** with the reason. A failed photo does not stop the others.
+- If something fails because of the connection, select **Retry** (or **Retry failed**) once you have
+  signal again. **Cancel** stops a photo that has not finished sending.
+- At the end, a summary says how many were sent. Select **See the photos you sent in** to check on
+  them.
+- JPEG, PNG, WebP or AVIF, up to 15 MB each, about 120 an hour. Videos can't be sent yet. iPhone
+  photos may need a setting change; see
   [Troubleshooting](troubleshooting.md#my-photo-will-not-upload).
 - Location and camera details are removed automatically.
 - **Photos you sent in** shows each one as **Pending approval** or **Published**.

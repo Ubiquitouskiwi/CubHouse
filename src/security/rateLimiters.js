@@ -24,6 +24,10 @@ function ipKey(req) {
   return ipKeyGenerator(req.ip || '0.0.0.0');
 }
 
+// Photos one person may upload per hour. Shown on the upload form so a big
+// batch is not a surprise.
+const UPLOADS_PER_HOUR = 120;
+
 function createRateLimiters({ storeFactory } = {}) {
   const make = (name, opts) =>
     rateLimit({
@@ -32,6 +36,10 @@ function createRateLimiters({ storeFactory } = {}) {
       ...(storeFactory ? { store: storeFactory(name) } : {}),
       handler: (req, res, _next, options) => {
         res.status(options.statusCode);
+        // fetch()/XHR callers (the bulk uploader) get a code they can map.
+        if (req.accepts(['html', 'json']) === 'json') {
+          return res.json({ ok: false, error: { code: 'rate_limited', message: options.message } });
+        }
         if (req.accepts('html')) {
           return res.render('error', {
             title: 'Slow down',
@@ -78,7 +86,7 @@ function createRateLimiters({ storeFactory } = {}) {
     }),
     uploadLimiter: make('upload', {
       windowMs: 60 * 60 * 1000,
-      limit: 120,
+      limit: UPLOADS_PER_HOUR,
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'Upload limit reached for now. Please try again later.',
     }),
@@ -91,4 +99,4 @@ function createRateLimiters({ storeFactory } = {}) {
   };
 }
 
-module.exports = { createRateLimiters };
+module.exports = { createRateLimiters, UPLOADS_PER_HOUR };
