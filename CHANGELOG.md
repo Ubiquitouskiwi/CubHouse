@@ -8,9 +8,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- `APP_TIME_ZONE` (an IANA zone such as `America/New_York`): the invite email now gives the code's
-  expiry in the family's time zone with the zone named, for example "Fri, Nov 13, 2026, 4:46 PM
-  EST", instead of UTC. Default UTC; an unknown zone falls back to UTC.
+- Family time zone for emails: times written into emails are now in the family's time zone with
+  the zone named, for example "Fri, Nov 13, 2026, 4:46 PM EST", instead of UTC. That covers the
+  invite code's expiry, the solo safety delay's "takes effect" time (in the guardian email and on
+  the Admin page), and when a guardian's delayed reset code starts working. A guardian picks the
+  zone in Admin, **Family settings** (searchable list, "Use my current time zone", live example);
+  any one guardian can change it, it is not governed, and each change is audit-logged as
+  `settings.time_zone` (old and new zone). `APP_TIME_ZONE` (an IANA zone such as
+  `America/New_York`) is now only the default when no guardian has chosen one; with neither, UTC.
+  Stored in a new `app_site_settings` table: apply `deploy/sql/005_site_settings.sql`.
 - Bulk photo upload on Home: pick or drag in many photos, three upload at a time, each with its own
   status (waiting, uploading %, saving, added or failed with a plain reason), Retry and Cancel per
   photo and for all, an end summary with a link to the new photos, and a warning before leaving

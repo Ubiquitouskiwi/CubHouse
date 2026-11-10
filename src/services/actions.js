@@ -7,6 +7,7 @@ const { audit } = require('../audit');
 const { logger } = require('../logger');
 const { buildInviteEmail } = require('./inviteEmail');
 const { maskEmail } = require('./support');
+const { effectiveTimeZone, formatInZone } = require('../timeZone');
 
 /**
  * Side-effecting operations shared by routes and by governance executors.
@@ -108,7 +109,7 @@ function createActions({ store, media, config, notifier }) {
       inviterName: inviter ? inviter.displayName : null,
       firstName,
       expiresAt: accessCode.expiresAt,
-      timeZone: config.app.timeZone,
+      timeZone: (await effectiveTimeZone(store, config)).zone,
     });
     try {
       await notifier.sendEmail({ to, subject: message.subject, text: message.text, html: message.html });
@@ -155,12 +156,13 @@ function createActions({ store, media, config, notifier }) {
     });
     const delayHours = Math.round(delayMs / 3600000);
     if (notifier) {
+      const startsAt = formatInZone(now + delayMs, (await effectiveTimeZone(store, config)).zone);
       await notifier.notifyUser(target, {
         subject: 'A sign-in reset code was issued for your account',
         text:
           'A guardian issued a one-time code to reset your password and two-step verification. ' +
           (isGuardian && delayMs > 0
-            ? `It starts working in ${delayHours} hours. If you did not ask for this, sign in and cancel it under Settings, Security, then contact the other guardian. `
+            ? `It starts working in ${delayHours} hours (${startsAt}). If you did not ask for this, sign in and cancel it under Settings, Security, then contact the other guardian. `
             : 'If you did not ask for this, tell the guardians right away. '),
       });
       if (isGuardian) {

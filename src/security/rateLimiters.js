@@ -97,6 +97,14 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'Too many confirmation attempts. Please wait and try again.',
     }),
+    // Family settings saves (e.g. the time zone), per guardian. Generous for
+    // a person, a ceiling for a script.
+    settingsLimiter: make('settings', {
+      windowMs: 15 * 60 * 1000,
+      limit: 30,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'You have changed settings a lot just now. Please wait a few minutes and try again.',
+    }),
     // Invite codes sent by email, per guardian (counted when the guardian
     // asks, including requests still waiting for approval).
     inviteEmailLimiter: make('invite-email', {

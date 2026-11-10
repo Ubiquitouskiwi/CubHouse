@@ -7,6 +7,17 @@ const { audit, verifyChain } = require('../audit');
 const { buildZip } = require('../services/zip');
 const { str, strList, validateEmail } = require('../validation');
 const { maskEmail } = require('../services/support');
+const {
+  ZONE_MAX,
+  validTimeZone,
+  supportedTimeZones,
+  formatInZone,
+  savedTimeZone,
+  effectiveTimeZone,
+  serverDefaultTimeZone,
+  saveTimeZone,
+  clearTimeZone,
+} = require('../timeZone');
 
 /**
  * Guardian controls. Dev (development only) may VIEW a reduced dashboard but
@@ -60,6 +71,19 @@ module.exports = function adminRoutes(ctx) {
     const reportsWithComment = await Promise.all(
       reports.map(async (r) => ({ ...r, comment: r.commentId ? await store.findCommentById(r.commentId) : null }))
     );
+    // Family settings card (guardians only). The example is a fresh invite
+    // code's expiry, written the way the email will write it.
+    const effectiveZone = await effectiveTimeZone(store, config);
+    const zoneSettings = can.manageMembers
+      ? {
+          saved: effectiveZone.source === 'family' ? effectiveZone.zone : null,
+          effective: effectiveZone,
+          serverDefault: serverDefaultTimeZone(config),
+          zones: supportedTimeZones(),
+          exampleAt: now + config.security.accessCodeTtlMs,
+          example: formatInZone(now + config.security.accessCodeTtlMs, effectiveZone.zone),
+        }
+      : null;
 
     res.render('admin', {
       title: 'Admin',
@@ -95,7 +119,49 @@ module.exports = function adminRoutes(ctx) {
       emailAvailable: notifier.emailAvailable(),
       guardianCount: users.filter((u) => u.role === ROLES.PARENT && !u.disabled).length,
       soloDelayHours: Math.round(config.governance.soloDelayMs / 3600000),
+      zoneSettings,
+      // Pending "Takes effect after" times, in the family's zone.
+      formatTime: (iso) => formatInZone(iso, effectiveZone.zone),
     });
+  });
+
+  // --- Family settings: time zone for emails ---
+
+  // Any one guardian, at once. Deliberately NOT governed (no two-guardian
+  // approval or solo delay): the zone only changes how times are written in
+  // emails (always with the zone named), so it widens nobody's access to
+  // anything. It is still audit-logged and every guardian can see it.
+  router.post('/admin/settings/time-zone', requireParent, limiters.settingsLimiter, async (req, res) => {
+    const back = '/admin#family-settings';
+    const before = await savedTimeZone(store);
+    const raw = str(req.body.timeZone, { field: 'timeZone', max: 200 });
+    let after = null;
+    if (raw) {
+      after = validTimeZone(raw);
+      if (!after) {
+        req.flash('error', `"${raw.slice(0, ZONE_MAX)}" is not a time zone this server knows. Pick one from the list, for example America/New_York.`);
+        return res.redirect(back);
+      }
+    }
+    const from = before ? before.zone : null;
+    if (from === after) {
+      req.flash('success', 'Time zone saved (nothing changed).');
+      return res.redirect(back);
+    }
+    if (after) {
+      await saveTimeZone(store, after, { updatedBy: req.user.id });
+    } else {
+      await clearTimeZone(store);
+    }
+    await audit(store, req, 'settings.time_zone', { targetType: 'site', details: { from, to: after } });
+    const effective = await effectiveTimeZone(store, config);
+    req.flash(
+      'success',
+      after
+        ? `Time zone set to ${after}. Emails now show times in it.`
+        : `Time zone cleared. Emails now use the server default, ${effective.zone}.`
+    );
+    return res.redirect(back);
   });
 
   // --- Invite codes ---

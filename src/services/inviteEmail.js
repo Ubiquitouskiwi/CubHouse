@@ -1,5 +1,7 @@
 'use strict';
 
+const { formatInZone } = require('../timeZone');
+
 /**
  * The invite email: an HTML message plus a plain-text alternative.
  *
@@ -66,7 +68,7 @@ function oneLine(value, max = 80) {
 }
 
 /**
- * "Fri, Nov 13, 2026, 4:46 PM EST" in the family's time zone (APP_TIME_ZONE),
+ * "Fri, Nov 13, 2026, 4:46 PM EST" in the family's time zone (src/timeZone.js),
  * plus a rough "about 3 days". An email cannot know the reader's own zone, so
  * the zone is always named.
  */
@@ -75,23 +77,7 @@ function describeExpiry(expiresAt, now = Date.now(), timeZone = 'UTC') {
   if (!Number.isFinite(at)) {
     return null;
   }
-  const format = (zone) =>
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    }).format(new Date(at));
-  let when;
-  try {
-    when = format(timeZone || 'UTC');
-  } catch {
-    when = format('UTC');
-  }
+  const when = formatInZone(at, timeZone);
   const hours = Math.max(1, Math.round((at - now) / 3600000));
   const rough = hours >= 48 ? `about ${Math.round(hours / 24)} days` : `about ${hours} hour${hours === 1 ? '' : 's'}`;
   return { when, rough };
