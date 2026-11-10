@@ -117,6 +117,39 @@ const config = {
     allowedFormats: ['jpeg', 'png', 'webp', 'heif', 'avif'],
   },
 
+  // Phone videos (MP4/MOV, H.264/HEVC). Uploaded in fixed-size chunks to a
+  // per-upload session, checked with ffprobe, transcoded in the background
+  // (one at a time, low priority) to 720p H.264/AAC with every metadata tag
+  // dropped, then stored as encrypted segments. See src/media/video.js.
+  video: {
+    // Upload ceiling for the ORIGINAL file (phone 4K clips are large).
+    maxBytes: num(env.VIDEO_MAX_BYTES, 500 * 1024 * 1024),
+    // One chunk per request. Must stay under the edge body cap (20 MB).
+    chunkBytes: num(env.VIDEO_CHUNK_BYTES, 8 * 1024 * 1024),
+    maxSeconds: num(env.VIDEO_MAX_SECONDS, 180),
+    // Containers round durations; a 3:00 clip may probe as 180.4 s.
+    toleranceSeconds: 1,
+    perHour: num(env.VIDEO_UPLOADS_PER_HOUR, 20),
+    bytesPerHour: num(env.VIDEO_BYTES_PER_HOUR, 2 * 1024 * 1024 * 1024),
+    // An upload session with no chunk for this long is dropped, temp file too.
+    sessionIdleMs: num(env.VIDEO_SESSION_IDLE_MS, 30 * 60 * 1000),
+    // Upload temp files and transcode scratch. On StarlingTek /data survives
+    // a release swap, so a queued job is not lost with the old container.
+    workDir:
+      env.VIDEO_WORK_DIR || (env.STK_DATA_DIR ? `${env.STK_DATA_DIR}/video-work` : 'data/video-work'),
+    ffmpegPath: env.FFMPEG_PATH || 'ffmpeg',
+    ffprobePath: env.FFPROBE_PATH || 'ffprobe',
+    // CPU share on a small shared droplet: x264 threads and nice level.
+    threads: num(env.VIDEO_THREADS, 2),
+    nice: num(env.VIDEO_NICE, 15),
+    maxAttempts: num(env.VIDEO_MAX_ATTEMPTS, 3),
+    // A running job whose lease runs out (crash, restart) is retried.
+    leaseMs: num(env.VIDEO_JOB_LEASE_MS, 20 * 60 * 1000),
+    // One ffmpeg run is killed after this long.
+    ffmpegTimeoutMs: num(env.VIDEO_FFMPEG_TIMEOUT_MS, 15 * 60 * 1000),
+    pollMs: num(env.VIDEO_POLL_MS, 5000),
+  },
+
   media: {
     // 'local' (dev, zero cost) or 'spaces' (DigitalOcean Spaces, production).
     backend: env.MEDIA_BACKEND || (isProduction ? 'spaces' : 'local'),
