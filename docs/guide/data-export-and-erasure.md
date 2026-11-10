@@ -18,7 +18,8 @@ about you:
   and which privacy notice you accepted,
 - your comments (including ones that were removed) and reactions,
 - your albums and which photos are in them,
-- photos you sent in (their captions and dates),
+- photos and videos you sent in (their captions and dates), and any video still being processed or
+  that could not be,
 - your download history.
 
 It does not include the photos themselves. Those belong to the family archive.
@@ -60,6 +61,10 @@ You get a zip file with:
 - `index.json`, listing each photo's file name, caption, date, who uploaded it, and an id for the
   guardian who shared it.
 
+**Videos are not in the export yet.** `index.json` lists each video (caption, date, length, who sent
+it) and marks it as not included, but the video files themselves stay in Cubhouse for now, like
+video downloads. Keep that in mind before you erase anything.
+
 Comments, reactions and albums are not included. Use it for safekeeping, or to hand the photos to
 the child when they are grown.
 
@@ -68,7 +73,8 @@ exported"). Keep the file somewhere private: it is every photo, with no marks.
 
 ### Erase the archive
 
-Erasing deletes **every photo** on the site permanently: every stored copy, and their comments,
+Erasing deletes **every photo and video** on the site permanently: every stored copy (for a video,
+every encrypted piece of it), and their comments,
 reactions and reports. Accounts, groups and the records stay. Download and security records keep
 the fact that something happened, without the photo.
 

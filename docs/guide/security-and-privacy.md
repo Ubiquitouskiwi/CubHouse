@@ -32,7 +32,13 @@ strangers. So the site is built for these cases:
 where it was taken and the phone's serial number. Cubhouse rebuilds every photo from its pixels
 when it is uploaded, so all of that is gone. The original file is never stored.
 
-**Private by default.** A new photo is visible to guardians only. A guardian must choose who else
+**Location is removed from videos too.** Phone videos carry the same hidden details: where they
+were filmed, the phone model, and when. Cubhouse converts every video to a fresh copy that keeps
+only the picture and sound, so the location and the rest are gone. The original file is deleted
+once the copy is made. Videos are stored encrypted in small pieces, play only inside Cubhouse after
+the same "are you allowed?" check as photos, and cannot be downloaded for now.
+
+**Private by default.** A new photo or video is visible to guardians only. A guardian must choose who else
 sees it.
 
 **Encrypted and locked away.** Photos are stored encrypted in a private storage space. Nothing

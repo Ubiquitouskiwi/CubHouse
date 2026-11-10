@@ -177,12 +177,39 @@ You can share your own pictures with the family. The guardians check each one fi
   signal again. **Cancel** stops a photo that has not finished sending.
 - At the end, a summary says how many were sent. Select **See the photos you sent in** to check on
   them.
-- JPEG, PNG, WebP or AVIF, up to 15 MB each, about 120 an hour. Videos can't be sent yet. iPhone
-  photos may need a setting change; see
-  [Troubleshooting](troubleshooting.md#my-photo-will-not-upload).
+- JPEG, PNG, WebP or AVIF, up to 15 MB each, about 120 an hour. iPhone photos may need a setting
+  change; see [Troubleshooting](troubleshooting.md#my-photo-will-not-upload). Videos can go in the
+  same batch; see [Send in a video](#send-in-a-video).
 - Location and camera details are removed automatically.
 - **Photos you sent in** shows each one as **Pending approval** or **Published**.
 - Once you send a photo, it belongs to the family library. Only the guardians can share or delete it.
+
+## Send in a video
+
+Short videos from your phone (MP4 or MOV, up to 3 minutes) go in the same box as photos.
+
+1. In **Add a photo**, select **Choose photos or videos** and pick the clip.
+2. Select **Send to parents**. The video shows **Uploading** with a percentage, then **Processing**,
+   then **Sent for approval**.
+
+![On a phone: puddles.jpg Added, and swing.mp4 Processing, with a note that you can leave the page](img/video-upload-processing-mobile.png)
+
+- Longer than 3 minutes? It fails straight away. Trim it on your phone (open it, select Edit, drag
+  the ends), then add it again.
+- If your signal drops, select **Retry**. The video carries on from where it stopped.
+- Once it says **Processing**, you can close the page. The guardians get it either way.
+- Its location, phone model and recording time are removed, like a photo's.
+
+## Watch videos
+
+Videos in **Photos** show a play button and their length. Open one and select play.
+
+![A video tile with a play button and 0:35](img/video-gallery-mobile.png)
+
+Videos cannot be downloaded for now. Where a Download button would be, the page says:
+*Videos stay snug inside Cubhouse for now, to keep them private. Downloads may come later.*
+
+![A video playing on a phone, with that note underneath](img/video-viewer-mobile.png)
 
 ## Your settings
 

@@ -52,8 +52,9 @@ Three photos go at a time, and one failure does not stop the others.
   to the top of the list. Select **Retry** on one, or **Retry failed** for all of them.
 - Select **View the new photos** to open **Photos**, or **View** on one photo to open it.
 - If you try to leave the page mid-upload, your browser asks you to confirm first.
-- JPEG, PNG, WebP or AVIF, up to 15 MB each, and about 120 photos an hour. Videos and iPhone HEIC
-  files cannot be uploaded yet. Files like these fail straight away, before anything is sent.
+- JPEG, PNG, WebP or AVIF, up to 15 MB each, and about 120 photos an hour. iPhone HEIC files
+  cannot be uploaded yet. Files like these fail straight away, before anything is sent. Videos
+  can go in the same batch; see [Upload videos](#upload-videos).
 - Every photo is rebuilt from its pixels. GPS location, camera model and every other hidden detail
   are removed. The original file is not kept.
 - New photos are visible to guardians only until you share them.
@@ -62,9 +63,43 @@ Three photos go at a time, and one failure does not stop the others.
   guardian**, and the other guardian gets one request per photo. For a big batch it is quicker to
   upload privately, then share them all at once from **Photos**.
 
+## Upload videos
+
+Short videos go in the same **Add a photo** box as photos, and a batch can mix both.
+
+1. Select **Choose photos or videos** and pick MP4 or MOV clips from your phone, up to 3 minutes
+   each.
+2. Select **Upload**. Each video shows **Waiting**, **Uploading** with a percentage, then
+   **Processing**, then **Added** or **Failed** with the reason.
+
+![The Add a photo form mid-batch: two photos Added, garden-run.mov Processing with a moving bar, and long-clip.mp4 Failed, Longer than 3 minutes](img/video-upload-processing.png)
+
+- A video longer than 3 minutes fails at once, before it is sent. Trim it on your phone first.
+- Videos are sent in small pieces. If the connection drops, select **Retry** and it carries on from
+  where it stopped, as long as you do it within about half an hour.
+- **Processing** happens on the server, one video at a time, and can take a few minutes. Once a
+  video says **Processing** you can leave the page; it keeps going.
+- Every video is converted to a version that plays on any phone or computer (at most 720p). Its
+  location, phone model and recording time are removed, and the original file is deleted. Only the
+  processed copy is kept, encrypted.
+- About 20 videos (and 2 GB) an hour per person, up to 500 MB each before processing.
+- Upload profiles apply to photos only for now. A new video starts **Parents only**; share it from
+  its page like a photo.
+
+In **Photos** a video shows its first frame with a play button and its length. Open it to play it.
+
+![The Photos page: a video tile with a play button and 0:40 next to photo tiles](img/video-gallery.png)
+
+**Downloads are off for videos for now.** Nobody, guardians included, sees a Download button on a
+video; its page says videos stay in Cubhouse to keep them private. **Allow download** is not offered
+for videos, and the site refuses a video download even if someone types the address.
+
+![A video playing in Cubhouse, with the note: Videos stay snug inside Cubhouse for now, to keep them private. Downloads may come later.](img/video-viewer.png)
+
 ## Approve photos family members send in
 
 Contributions appear on **Home** under **Waiting for your approval**. They stay private until you act.
+A video shows a play button: open it to watch it before you approve it.
 
 ![A photo called Kite flying by Uncle Lee waiting for approval, with choices Parents only, Groups, and Whole family, and Approve and Reject buttons](img/guardian-approvals.png)
 
