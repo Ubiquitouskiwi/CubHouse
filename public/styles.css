@@ -2502,3 +2502,34 @@ button.reaction-chip:hover {
     display: none;
   }
 }
+
+/* Upload allowance: how many photos can still be added right now. */
+.upload-allowance {
+  margin: 0.5rem 0;
+  font-weight: 600;
+}
+
+.upload-cap-notice {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border, currentColor);
+  border-radius: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.upload-cap-notice p {
+  margin: 0 0 0.4rem;
+}
+
+.upload-cap-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+
+.upload-drop.is-disabled,
+.upload-file input[type='file']:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Photo selection is limited to what you can still upload: the **Add a photo** form on Home says
+  "You can add N more photos right now" before you pick. If you pick or drop more, it keeps the
+  first ones in the order you chose, says how many it kept, lists the ones it left out and when
+  your limit resets, and at zero it switches picking off and says when it resets. The count is
+  re-read from the site after each batch. The number comes from the same hourly limiter that
+  enforces the limit, via a new `GET /photos/upload/allowance` (signed in, no-store, read-only);
+  the site still refuses extra uploads if the page is bypassed. No migration.
 - Family time zone for emails: times written into emails are now in the family's time zone with
   the zone named, for example "Fri, Nov 13, 2026, 4:46 PM EST", instead of UTC. That covers the
   invite code's expiry, the solo safety delay's "takes effect" time (in the guardian email and on

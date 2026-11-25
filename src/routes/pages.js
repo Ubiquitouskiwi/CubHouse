@@ -6,6 +6,7 @@ const { portalCapabilities, photoCapabilities, canViewPhoto, ROLE_LABELS, PHOTO_
 const { checkNewPassword } = require('../security/passwordPolicy');
 const { audit } = require('../audit');
 const { UPLOADS_PER_HOUR } = require('../security/rateLimiters');
+const { allowanceText } = require('../../public/photo-upload');
 const {
   THEMES,
   str,
@@ -20,7 +21,7 @@ function viewerFrom(user) {
 }
 
 module.exports = function pageRoutes(ctx) {
-  const { store, config, notifier } = ctx;
+  const { store, config, notifier, limiters } = ctx;
   const router = createRouter();
 
   router.get('/', (req, res) => res.redirect(req.session && req.session.userId ? '/home' : '/login'));
@@ -58,6 +59,8 @@ module.exports = function pageRoutes(ctx) {
       [groups, profiles] = await Promise.all([store.listGroups(), store.listUploadProfiles()]);
     }
 
+    const uploadAllowance = await limiters.uploadAllowance(req);
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.render('home', {
       title: 'Home',
       user,
@@ -79,6 +82,8 @@ module.exports = function pageRoutes(ctx) {
       profiles,
       audiences: PHOTO_AUDIENCE,
       uploadLimits: { maxBytes: config.uploads.maxBytes, perHour: UPLOADS_PER_HOUR },
+      uploadAllowance,
+      uploadAllowanceText: allowanceText(uploadAllowance),
     });
   });
 

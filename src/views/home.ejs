@@ -187,16 +187,22 @@
                               enctype="multipart/form-data"
                               data-max-bytes="<%= uploadLimits.maxBytes %>"
                               data-per-hour="<%= uploadLimits.perHour %>"
+                              data-remaining="<%= uploadAllowance.remaining %>"
+                              data-reset-time="<%= uploadAllowance.resetTime || '' %>"
+                              data-allowance-url="/photos/upload/allowance"
                               data-uploader-role="<%= photoCan.setPermissions ? 'parent' : 'member' %>">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                                 <div class="upload-drop" data-upload-drop>
                                   <label class="upload-file">
                                     <span class="upload-file-label" data-upload-pick-label>Choose a photo</span>
                                     <input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/avif"
-                                      data-upload-input required aria-describedby="upload-limits" />
+                                      data-upload-input required aria-describedby="upload-allowance upload-limits"
+                                      <%= uploadAllowance.remaining <= 0 ? 'disabled' : '' %> />
                                   </label>
                                   <span class="upload-drop-text" data-upload-drop-text hidden>or drag photos here</span>
                                 </div>
+                                <p class="upload-allowance" id="upload-allowance" data-upload-allowance><%= uploadAllowanceText %></p>
+                                <div class="upload-cap-notice" data-upload-capped hidden></div>
                                 <p class="upload-hint muted" id="upload-limits">
                                   Photos only: JPEG, PNG, WebP, or AVIF, up to
                                   <%= Math.round(uploadLimits.maxBytes / (1024 * 1024)) %> MB each.

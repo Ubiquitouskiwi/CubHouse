@@ -203,6 +203,14 @@ function photoRoutes(ctx) {
 
   // --- Contribute a photo ---
 
+  // What this person may still upload right now. Read-only; computed by the
+  // same limiter that enforces the limit. Shown before picking and refreshed
+  // after an upload.
+  router.get('/photos/upload/allowance', requireAuth, async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.json(await limiters.uploadAllowance(req));
+  });
+
   router.post('/photos/upload', requireAuth, limiters.uploadLimiter, async (req, res) => {
     const user = req.user;
     const back = safeReturnPath(req, '/photos');
