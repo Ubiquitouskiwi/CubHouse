@@ -154,4 +154,96 @@
     input.addEventListener('input', sync);
     sync();
   });
+
+  // Masked invitee emails with a per-row "Show" (see partials/masked-email.ejs).
+  // The full address is fetched for one row only, shown for about 15 seconds,
+  // and put back when another row is shown, the page is hidden, or it is left.
+  var REVEAL_MS = 15000;
+  var revealed = null;
+
+  function remask(box, message) {
+    if (!box || !box._reveal) {
+      return;
+    }
+    var st = box._reveal;
+    clearTimeout(st.timer);
+    box.querySelector('[data-email-text]').textContent = st.masked;
+    var btn = box.querySelector('[data-email-show]');
+    btn.textContent = 'Show';
+    btn.disabled = false;
+    btn.setAttribute('aria-label', 'Show full email address, currently ' + st.masked);
+    box.querySelector('[data-email-status]').textContent = message || '';
+    box._reveal = null;
+    if (revealed === box) {
+      revealed = null;
+    }
+  }
+
+  function remaskAll() {
+    remask(revealed, '');
+  }
+
+  function bindReveal(box) {
+    var btn = box.querySelector('[data-email-show]');
+    var text = box.querySelector('[data-email-text]');
+    var status = box.querySelector('[data-email-status]');
+    btn.addEventListener('click', function () {
+      if (box._reveal) {
+        remask(box, 'Email hidden again.');
+        return;
+      }
+      var masked = text.textContent;
+      btn.disabled = true;
+      var body = new URLSearchParams();
+      body.set('kind', box.getAttribute('data-kind'));
+      body.set('id', box.getAttribute('data-id'));
+      fetch('/admin/reveal-email', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRF-Token': box.getAttribute('data-csrf'),
+        },
+        body: body.toString(),
+      })
+        .then(function (res) {
+          return res.json().catch(function () {
+            return { ok: false };
+          });
+        })
+        .then(function (data) {
+          btn.disabled = false;
+          if (!data || !data.ok || typeof data.email !== 'string') {
+            status.textContent = (data && data.error && data.error.message) || 'Could not show the email.';
+            return;
+          }
+          remask(revealed, '');
+          text.textContent = data.email;
+          btn.textContent = 'Hide';
+          btn.setAttribute('aria-label', 'Hide full email address');
+          status.textContent = 'Full email shown. It hides again in 15 seconds.';
+          box._reveal = {
+            masked: masked,
+            timer: setTimeout(function () {
+              remask(box, 'Email hidden again.');
+            }, REVEAL_MS),
+          };
+          revealed = box;
+        })
+        .catch(function () {
+          btn.disabled = false;
+          status.textContent = 'Could not show the email.';
+        });
+    });
+  }
+  document.querySelectorAll('[data-email-reveal]').forEach(bindReveal);
+  window.addEventListener('pagehide', remaskAll);
+  window.addEventListener('pageshow', remaskAll);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      remaskAll();
+    }
+  });
 })();

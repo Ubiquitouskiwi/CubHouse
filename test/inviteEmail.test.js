@@ -88,9 +88,10 @@ test('two guardians: the code is emailed only when the other guardian approves',
   const [request] = await env.store.listGovernanceRequests({ status: 'pending' });
   assert.equal(request.payload.sendEmail, true);
   assert.doesNotMatch(request.summary, /grandpa@/, 'full address in the summary');
-  // The other guardian sees who the code is for in the approval list.
+  // The other guardian sees who the code is for, masked: "Show" reveals it (test/revealEmail.test.js).
   const page = await b.get('/admin');
-  assert.match(page.body, /Invite code for <strong>grandpa@test\.com<\/strong>/);
+  assert.match(page.body, /Invite code for\s+<span class="masked-email"[^>]*>\s*<strong data-email-text>g\u2022\u2022\u2022@test\.com/);
+  assert.ok(!page.body.includes(INVITEE), 'full address in the admin page');
   // Guardian notification emails never carry the full address.
   assert.ok(env.notifier.sent.filter((m) => m.to !== INVITEE).every((m) => !m.text.includes(INVITEE)));
 

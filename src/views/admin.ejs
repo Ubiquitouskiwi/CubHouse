@@ -76,7 +76,8 @@
           <p><strong><%= r.summary %></strong></p>
           <% if (r.type === 'accessCode.create' && r.payload && r.payload.intendedEmail) { %>
             <p>
-              Invite code for <strong><%= r.payload.intendedEmail %></strong><% if (r.payload.sendEmail) { %>.
+              Invite code for
+              <%- include('partials/masked-email', { masked: r.maskedEmail, kind: 'request', id: r.id }) %><% if (r.payload.sendEmail) { %>.
               It is emailed to them as soon as the code is created.<% } %>
             </p>
           <% } %>
@@ -171,7 +172,7 @@
           <% accessCodes.forEach(function (ac) { %>
             <tr>
               <td><% if (ac.status === 'open') { %><code><%= ac.code %></code><% } else { %><span class="muted">hidden</span><% } %></td>
-              <td><%= ac.note || '' %><% if (ac.intendedEmail) { %><br /><span class="muted"><%= ac.intendedEmail %></span><% } %></td>
+              <td><%= ac.note || '' %><% if (ac.intendedEmail) { %><br /><span class="muted"><%- include('partials/masked-email', { masked: ac.maskedEmail, kind: 'code', id: ac.code }) %></span><% } %></td>
               <td><%= ac.groupName || '' %></td>
               <td>
                 <% if (ac.status === 'used') { %><span class="badge badge-used">Used by <%= ac.usedByName %></span>

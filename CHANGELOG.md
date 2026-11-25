@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Invitee emails in Admin are masked by default, with a per-row **Show** button. On **Changes
+  waiting on a guardian** and in the invite codes table, the address is no longer in the page;
+  **Show** fetches that one row's address (guardians only, rate limited, never cached), reveals it
+  for about 15 seconds, and hides it again when you press **Hide**, show another row, switch tabs or
+  leave the page. Each reveal is audit-logged as `email.revealed` (who, which row; never the
+  address). No database change.
 - Family time zone for emails: times written into emails are now in the family's time zone with
   the zone named, for example "Fri, Nov 13, 2026, 4:46 PM EST", instead of UTC. That covers the
   invite code's expiry, the solo safety delay's "takes effect" time (in the guardian email and on

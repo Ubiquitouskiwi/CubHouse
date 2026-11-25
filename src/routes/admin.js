@@ -6,6 +6,7 @@ const { PHOTO_AUDIENCE, portalCapabilities, isValidPhotoAudience, ROLE_LABELS, R
 const { audit, verifyChain } = require('../audit');
 const { buildZip } = require('../services/zip');
 const { str, strList, validateEmail } = require('../validation');
+const crypto = require('crypto');
 const { maskEmail } = require('../services/support');
 const {
   ZONE_MAX,
@@ -101,6 +102,7 @@ module.exports = function adminRoutes(ctx) {
             ...ac,
             status: codeStatus(ac),
             groupName: ac.groupId ? (groupsById.get(ac.groupId) || {}).name : null,
+            maskedEmail: ac.intendedEmail ? maskEmail(ac.intendedEmail) : null,
             usedByName: ac.usedBy ? (usersById.get(ac.usedBy) || {}).displayName || 'Former member' : null,
           }))
         : [],
@@ -112,6 +114,8 @@ module.exports = function adminRoutes(ctx) {
         ...r,
         requestedByName: (usersById.get(r.requestedBy) || {}).displayName || 'A guardian',
         mine: r.requestedBy === req.user.id,
+        // The full address stays out of the page; "Show" fetches it per row.
+        maskedEmail: r.payload && r.payload.intendedEmail ? maskEmail(r.payload.intendedEmail) : null,
       })),
       reports: reportsWithComment,
       currentUserId: req.user.id,
@@ -123,6 +127,41 @@ module.exports = function adminRoutes(ctx) {
       // Pending "Takes effect after" times, in the family's zone.
       formatTime: (iso) => formatInZone(iso, effectiveZone.zone),
     });
+  });
+
+  // --- Show one masked invitee email ---
+
+  // The list renders addresses masked only. A guardian presses "Show" on one
+  // row to fetch that one address. Audited (who, which row; never the address),
+  // rate limited and never cached. Only rows the Admin page itself lists:
+  // a pending invite request, or an invite code.
+  router.post('/admin/reveal-email', requireParent, limiters.revealEmailLimiter, async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    const kind = str(req.body.kind, { field: 'kind', max: 20 });
+    const id = str(req.body.id, { field: 'id', max: 200 });
+    let email = null;
+    let targetType = null;
+    let targetId = id;
+    if (kind === 'request') {
+      const r = await store.findGovernanceRequest(id);
+      if (r && r.status === 'pending' && r.type === 'accessCode.create') {
+        email = r.payload && r.payload.intendedEmail;
+        targetType = 'governanceRequest';
+      }
+    } else if (kind === 'code') {
+      const ac = await store.findAccessCode(id);
+      if (ac) {
+        email = ac.intendedEmail;
+        targetType = 'accessCode';
+        // The code itself is a secret: record only a short fingerprint of it.
+        targetId = crypto.createHash('sha256').update(id).digest('hex').slice(0, 12);
+      }
+    }
+    if (!email) {
+      return res.status(404).json({ ok: false, error: { code: 'not_found', message: 'No email to show.' } });
+    }
+    await audit(store, req, 'email.revealed', { targetType, targetId });
+    return res.json({ ok: true, email });
   });
 
   // --- Family settings: time zone for emails ---

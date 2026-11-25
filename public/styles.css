@@ -2502,3 +2502,13 @@ button.reaction-chip:hover {
     display: none;
   }
 }
+
+.masked-email {
+  overflow-wrap: anywhere;
+}
+
+.masked-email .link-button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.5rem;
+}
