@@ -252,3 +252,69 @@ test('home renders the uploader with its limits for both roles', async (t) => {
     assert.match(body, /aria-live="polite" data-upload-live/);
   }
 });
+
+// -- Upload allowance (issue #35) ------------------------------------------
+
+test('allowance: computeAllowance covers unused, partly used, exact limit, and an expired window', () => {
+  const { computeAllowance } = require('../src/security/rateLimiters');
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  const later = new Date(now + 30 * 60 * 1000);
+  assert.deepEqual(computeAllowance({ limit: 10, info: undefined, now }), {
+    limit: 10, used: 0, remaining: 10, resetTime: null,
+  });
+  const part = computeAllowance({ limit: 10, info: { totalHits: 4, resetTime: later }, now });
+  assert.equal(part.remaining, 6);
+  assert.equal(part.resetTime, later.toISOString());
+  assert.equal(computeAllowance({ limit: 10, info: { totalHits: 10, resetTime: later }, now }).remaining, 0);
+  assert.equal(computeAllowance({ limit: 10, info: { totalHits: 12, resetTime: later }, now }).remaining, 0);
+  // A window that has passed counts for nothing.
+  const reset = computeAllowance({ limit: 10, info: { totalHits: 10, resetTime: new Date(now - 1) }, now });
+  assert.equal(reset.remaining, 10);
+  assert.equal(reset.resetTime, null);
+});
+
+test('allowance: the endpoint reads the same limiter that enforces the limit, and never counts itself', async (t) => {
+  const { parent, member } = await setup(t);
+  const { UPLOADS_PER_HOUR } = require('../src/security/rateLimiters');
+  const first = await parent.get('/photos/upload/allowance');
+  assert.equal(first.status, 200);
+  assert.match(first.headers['cache-control'], /no-store/);
+  assert.equal(parse(first).remaining, UPLOADS_PER_HOUR);
+  // Reading twice does not use anything up.
+  assert.equal(parse(await parent.get('/photos/upload/allowance')).remaining, UPLOADS_PER_HOUR);
+
+  await parent.refreshToken();
+  for (let i = 0; i < 3; i += 1) {
+    await parent.postMultipart('/photos/upload', { _csrf: parent.token }, null, { csrf: false, ...JSON_ACCEPT });
+  }
+  const after = parse(await parent.get('/photos/upload/allowance'));
+  assert.equal(after.used, 3);
+  assert.equal(after.remaining, UPLOADS_PER_HOUR - 3);
+  assert.ok(Date.parse(after.resetTime) > Date.now());
+  // Per person: another member still has the full allowance.
+  assert.equal(parse(await member.get('/photos/upload/allowance')).remaining, UPLOADS_PER_HOUR);
+
+  // Home shows it before picking.
+  const home = (await parent.get('/home')).body;
+  assert.match(home, new RegExp(`data-remaining="${UPLOADS_PER_HOUR - 3}"`));
+  assert.match(home, /You can add \d+ more photos right now\./);
+});
+
+test('allowance: signed-out callers are refused, and at the limit the picker is disabled with the reset time', async (t) => {
+  const { env, parent } = await setup(t);
+  const { UPLOADS_PER_HOUR } = require('../src/security/rateLimiters');
+  const anon = await env.client().get('/photos/upload/allowance', { headers: { accept: 'application/json' } });
+  assert.notEqual(anon.status, 200);
+
+  await parent.refreshToken();
+  for (let i = 0; i < UPLOADS_PER_HOUR; i += 1) {
+    await parent.postMultipart('/photos/upload', { _csrf: parent.token }, null, { csrf: false, ...JSON_ACCEPT });
+  }
+  assert.equal(parse(await parent.get('/photos/upload/allowance')).remaining, 0);
+  const home = (await parent.get('/home')).body;
+  assert.match(home, /You have reached your upload limit for now\. You can add more photos in about \d+ minutes?\./);
+  assert.match(home, /data-upload-input[^>]*disabled/);
+  // The server still enforces the limit if the client is bypassed.
+  const over = await parent.postMultipart('/photos/upload', { _csrf: parent.token }, null, { csrf: false, ...JSON_ACCEPT });
+  assert.equal(over.status, 429);
+});

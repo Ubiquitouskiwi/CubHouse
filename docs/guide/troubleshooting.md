@@ -110,8 +110,9 @@ Type it exactly as given, with the email the guardian expected. Otherwise ask fo
   library are usually converted for you; HEIC files copied to a computer are not.
 - "The connection dropped." Your Wi-Fi or mobile signal cut out. Once it is back, select **Retry**
   on the photo, or **Retry failed** for all of them.
-- "Upload limit reached for now." Each person can upload about 120 photos an hour. Wait a while,
-  then select **Retry failed**.
+- "Upload limit reached for now." Each person can upload about 120 photos an hour. The form shows
+  how many you can still add and when your limit resets. If a pick was cut short, the photos left
+  out are listed; add them again after the reset. Wait a while, then select **Retry failed**.
 - "You were signed out" or "This page expired." Refresh the page, sign in if asked, and add the
   photos that did not go through. Photos marked **Added** or **Sent for approval** are already safe.
 - "Already in this list, so it was skipped." You picked the same photo twice. Nothing to do.

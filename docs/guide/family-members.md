@@ -173,6 +173,9 @@ You can share your own pictures with the family. The guardians check each one fi
 
 - Each photo shows where it is: **Waiting**, **Uploading** with a percentage, **Saving**, then
   **Sent for approval** or **Failed** with the reason. A failed photo does not stop the others.
+- Above the list, the form says how many more photos you can add right now. If you pick more than
+  that, it keeps the first ones you picked, tells you how many it kept and lists the ones it left
+  out, and says when your limit resets. At zero, picking is switched off until then.
 - If something fails because of the connection, select **Retry** (or **Retry failed**) once you have
   signal again. **Cancel** stops a photo that has not finished sending.
 - At the end, a summary says how many were sent. Select **See the photos you sent in** to check on

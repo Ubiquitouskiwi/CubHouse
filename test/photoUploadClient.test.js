@@ -244,3 +244,64 @@ test('overallText counts only photos actually sent, not files refused up front',
   const c = { total: 9, queued: 4, uploading: 3, processing: 0, done: 0, failed: 2, cancelled: 0, skipped: 0, rejected: 2 };
   assert.match(upload.overallText(c, { percent: 20, eta: NaN }), /^Uploading: 0 of 7 finished, 20%$/);
 });
+
+// -- upload allowance and selection cap (issue #35) ---------------------------
+
+const names = (list) => list.map((f) => f.name);
+const pics = (n) => Array.from({ length: n }, (_, i) => ({ name: `p${i + 1}.jpg`, type: 'image/jpeg', size: 10 }));
+
+test('capSelection: allowance 0 keeps nothing', () => {
+  const r = upload.capSelection(pics(3), 0);
+  assert.equal(r.kept.length, 0);
+  assert.deepEqual(names(r.left), ['p1.jpg', 'p2.jpg', 'p3.jpg']);
+});
+
+test('capSelection: exactly the allowance keeps everything', () => {
+  const r = upload.capSelection(pics(5), 5);
+  assert.equal(r.kept.length, 5);
+  assert.equal(r.left.length, 0);
+  assert.equal(r.used, 5);
+});
+
+test('capSelection: over the allowance keeps the first N in the order chosen and loses nothing', () => {
+  const files = pics(8);
+  const r = upload.capSelection(files, 5);
+  assert.deepEqual(names(r.kept), ['p1.jpg', 'p2.jpg', 'p3.jpg', 'p4.jpg', 'p5.jpg']);
+  assert.deepEqual(names(r.left), ['p6.jpg', 'p7.jpg', 'p8.jpg']);
+  assert.equal(r.kept.length + r.left.length, files.length);
+});
+
+test('capSelection: a file that cannot upload anyway does not use up the allowance', () => {
+  const files = [pics(1)[0], { name: 'clip.mp4', type: 'video/mp4', size: 10 }, ...pics(3).slice(1)];
+  const r = upload.capSelection(files, 2, (f) => !upload.checkFile(f, 15e6));
+  assert.deepEqual(names(r.kept), ['p1.jpg', 'clip.mp4', 'p2.jpg']);
+  assert.deepEqual(names(r.left), ['p3.jpg']);
+  assert.equal(r.used, 2);
+});
+
+test('capSelection: a negative allowance behaves like 0', () => {
+  assert.equal(upload.capSelection(pics(2), -4).kept.length, 0);
+});
+
+test('allowance wording: before picking, at zero, and after the window resets', () => {
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  const reset = new Date(now + 25 * 60 * 1000 - 5000).toISOString();
+  assert.equal(upload.allowanceText({ remaining: 5, limit: 120, resetTime: reset }, now),
+    'You can add 5 more photos right now.');
+  assert.equal(upload.allowanceText({ remaining: 1, limit: 120, resetTime: null }, now),
+    'You can add 1 more photo right now.');
+  assert.equal(upload.allowanceText({ remaining: 0, limit: 120, resetTime: reset }, now),
+    'You have reached your upload limit for now. You can add more photos in about 25 minutes.');
+  // Window passed: no reset phrase, and a fresh allowance reads normally.
+  assert.equal(upload.resetPhrase(reset, now + 3600 * 1000), '');
+  assert.equal(upload.allowanceText({ remaining: 120, limit: 120, resetTime: null }, now),
+    'You can add 120 more photos right now.');
+});
+
+test('capMessage names how many were kept, how many were left out, and when the limit resets', () => {
+  const now = Date.parse('2026-01-01T12:00:00Z');
+  const reset = new Date(now + 30 * 60 * 1000).toISOString();
+  assert.equal(upload.capMessage(5, 12, { limit: 120, resetTime: reset }, now),
+    'You can add 5 more photos right now. We kept the first 5 you picked and left out 12. ' +
+    'Your limit resets in about 30 minutes.');
+});

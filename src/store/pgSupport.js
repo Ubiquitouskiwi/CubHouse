@@ -73,6 +73,15 @@ class PgRateLimitStore {
     return { totalHits: rows[0].hits, resetTime: new Date(rows[0].reset_at) };
   }
 
+  // Read-only, so a page can show what is left without counting as a hit.
+  async get(key) {
+    const { rows } = await this.pool.query(
+      'SELECT hits, reset_at FROM app_rate_limits WHERE key = $1 AND reset_at > now()',
+      [this.prefix + key]
+    );
+    return rows[0] ? { totalHits: rows[0].hits, resetTime: new Date(rows[0].reset_at) } : undefined;
+  }
+
   async decrement(key) {
     await this.pool.query('UPDATE app_rate_limits SET hits = GREATEST(hits - 1, 0) WHERE key = $1', [this.prefix + key]);
   }

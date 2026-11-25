@@ -52,6 +52,10 @@ Three photos go at a time, and one failure does not stop the others.
   to the top of the list. Select **Retry** on one, or **Retry failed** for all of them.
 - Select **View the new photos** to open **Photos**, or **View** on one photo to open it.
 - If you try to leave the page mid-upload, your browser asks you to confirm first.
+- Above the list, the form says how many more photos you can add right now. If you pick more than
+  that, it keeps the first ones you picked, tells you how many it kept and lists the ones it left
+  out, and says when your limit resets. At zero, picking is switched off until then. Nothing is
+  dropped quietly. The limit itself is still enforced by the site.
 - JPEG, PNG, WebP or AVIF, up to 15 MB each, and about 120 photos an hour. Videos and iPhone HEIC
   files cannot be uploaded yet. Files like these fail straight away, before anything is sent.
 - Every photo is rebuilt from its pixels. GPS location, camera model and every other hidden detail
