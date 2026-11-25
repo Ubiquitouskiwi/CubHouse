@@ -28,6 +28,30 @@ function ipKey(req) {
 // batch is not a surprise.
 const UPLOADS_PER_HOUR = 120;
 const INVITE_EMAILS_PER_HOUR = 10;
+const UPLOAD_WINDOW_MS = 60 * 60 * 1000;
+
+// One key function for the upload limiter AND the allowance read, so the number
+// shown to a person is always the number the limiter counts against.
+function uploadKey(req) {
+  return `u:${(req.session && req.session.userId) || ipKey(req)}`;
+}
+
+/**
+ * Pure: what is left of a rolling limit. `info` is the limiter store's
+ * { totalHits, resetTime } for the key (undefined when never hit).
+ * resetTime is null while nothing is used, because no window is running.
+ */
+function computeAllowance({ limit, info, now = Date.now() }) {
+  const resetMs = info && info.resetTime ? new Date(info.resetTime).getTime() : 0;
+  const live = Boolean(info) && resetMs > now;
+  const used = live ? Math.max(0, info.totalHits || 0) : 0;
+  return {
+    limit,
+    used,
+    remaining: Math.max(0, limit - used),
+    resetTime: live ? new Date(resetMs).toISOString() : null,
+  };
+}
 
 function createRateLimiters({ storeFactory } = {}) {
   const make = (name, opts) =>
@@ -51,6 +75,13 @@ function createRateLimiters({ storeFactory } = {}) {
       },
       ...opts,
     });
+
+  const uploadLimiter = make('upload', {
+    windowMs: UPLOAD_WINDOW_MS,
+    limit: UPLOADS_PER_HOUR,
+    keyGenerator: uploadKey,
+    message: 'Upload limit reached for now. Please try again later.',
+  });
 
   return {
     loginLimiter: make('login', {
@@ -85,12 +116,11 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'You are posting very quickly. Please wait a few minutes.',
     }),
-    uploadLimiter: make('upload', {
-      windowMs: 60 * 60 * 1000,
-      limit: UPLOADS_PER_HOUR,
-      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
-      message: 'Upload limit reached for now. Please try again later.',
-    }),
+    uploadLimiter,
+    // Reads (never increments) how many uploads this person has left, from the
+    // same limiter and key that enforce the limit.
+    uploadAllowance: async (req) =>
+      computeAllowance({ limit: UPLOADS_PER_HOUR, info: await uploadLimiter.getKey(uploadKey(req)) }),
     reauthLimiter: make('reauth', {
       windowMs: 15 * 60 * 1000,
       limit: 10,
@@ -116,4 +146,4 @@ function createRateLimiters({ storeFactory } = {}) {
   };
 }
 
-module.exports = { createRateLimiters, UPLOADS_PER_HOUR, INVITE_EMAILS_PER_HOUR };
+module.exports = { createRateLimiters, computeAllowance, UPLOADS_PER_HOUR, INVITE_EMAILS_PER_HOUR };

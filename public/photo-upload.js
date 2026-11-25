@@ -117,6 +117,64 @@
     }
   }
 
+  // --- Upload allowance (how many more photos this person may add right now) ---
+  // The server computes the number with the limiter that enforces it; this only
+  // words it and caps what gets picked. The server still refuses extras.
+
+  function resetPhrase(resetTime, now) {
+    var ms = resetTime ? new Date(resetTime).getTime() - (now === undefined ? Date.now() : now) : NaN;
+    if (!isFinite(ms) || ms <= 0) {
+      return '';
+    }
+    var minutes = Math.ceil(ms / 60000);
+    return minutes <= 1 ? 'in about a minute' : 'in about ' + minutes + ' minutes';
+  }
+
+  /** The line shown before picking. `a` is { remaining, limit, resetTime }. */
+  function allowanceText(a, now) {
+    var when = resetPhrase(a.resetTime, now);
+    if (a.remaining <= 0) {
+      return 'You have reached your upload limit for now. ' +
+        (when ? 'You can add more photos ' + when + '.' : 'Please check back a little later.');
+    }
+    return 'You can add ' + plural(a.remaining, 'more photo', 'more photos') + ' right now.';
+  }
+
+  /**
+   * Keeps the first `room` files that would use up an upload, in the order
+   * chosen. Files that cannot be uploaded anyway (`counts(file)` false: a
+   * video, say) are kept so their row can say why, and do not use the room.
+   * Returns { kept, left } with nothing lost between the two.
+   */
+  function capSelection(files, room, counts) {
+    var kept = [];
+    var left = [];
+    var free = Math.max(0, room);
+    var used = 0;
+    var list = Array.prototype.slice.call(files || []);
+    for (var i = 0; i < list.length; i += 1) {
+      var uses = counts ? counts(list[i]) : true;
+      if (!uses) {
+        kept.push(list[i]);
+      } else if (free > 0) {
+        free -= 1;
+        used += 1;
+        kept.push(list[i]);
+      } else {
+        left.push(list[i]);
+      }
+    }
+    return { kept: kept, left: left, used: used };
+  }
+
+  /** The message shown when a pick was cut short. `a` is the allowance. */
+  function capMessage(used, leftCount, a, now) {
+    var when = resetPhrase(a.resetTime, now);
+    return 'You can add ' + plural(used, 'more photo', 'more photos') + ' right now. We kept the first ' + used +
+      ' you picked and left out ' + leftCount + '. ' +
+      (when ? 'Your limit resets ' + when + '.' : 'The limit is ' + a.limit + ' photos an hour.');
+  }
+
   /** Map an HTTP answer (status + parsed JSON or null) to { ok, ... }. */
   function interpretResponse(status, json, redirectedToLogin) {
     if (json && json.ok === true) {
@@ -551,6 +609,18 @@
     };
   }
 
+  function readAllowance(form) {
+    var remaining = form.getAttribute('data-remaining');
+    if (remaining === null || remaining === '' || !isFinite(Number(remaining))) {
+      return null;
+    }
+    return {
+      remaining: Number(remaining),
+      limit: Number(form.getAttribute('data-per-hour')) || 120,
+      resetTime: form.getAttribute('data-reset-time') || null,
+    };
+  }
+
   function mount(doc) {
     var form = doc.querySelector('[data-upload-form]');
     if (!form || typeof FormData === 'undefined' || typeof XMLHttpRequest === 'undefined') {
@@ -579,6 +649,12 @@
     var role = form.getAttribute('data-uploader-role') || 'member';
     var maxBytes = Number(form.getAttribute('data-max-bytes')) || 15 * 1024 * 1024;
     var perHour = Number(form.getAttribute('data-per-hour')) || 120;
+    var allowanceBox = q('[data-upload-allowance]');
+    var capBox = q('[data-upload-capped]');
+    var allowanceUrl = form.getAttribute('data-allowance-url');
+    var allowance = readAllowance(form);
+    var sentSinceFetch = 0;
+    var resetTimer = null;
     var labelOne = submitBtn.getAttribute('data-label-one') || 'Upload';
     var rows = {};
     var previews = 0;
@@ -602,6 +678,63 @@
       multiHint.hidden = false;
     }
 
+    // Photos still allowed = what the server last said, less what this page has
+    // since sent or queued. Re-read from the server after every batch.
+    function room() {
+      if (!allowance) {
+        return Infinity;
+      }
+      var c = queue.counts();
+      return allowance.remaining - sentSinceFetch - c.queued;
+    }
+
+    function renderAllowance() {
+      if (!allowance) {
+        return;
+      }
+      var r = room();
+      var shown = { remaining: Math.max(0, r), limit: allowance.limit, resetTime: allowance.resetTime };
+      if (allowanceBox) {
+        allowanceBox.textContent = allowanceText(shown);
+      }
+      input.disabled = r <= 0 && !queue.isBusy();
+      if (drop) {
+        drop.classList.toggle('is-disabled', input.disabled);
+      }
+    }
+
+    function scheduleReset() {
+      clearTimeout(resetTimer);
+      if (!allowance || !allowance.resetTime) {
+        return;
+      }
+      var wait = new Date(allowance.resetTime).getTime() - Date.now() + 1500;
+      if (wait > 0 && wait < 2147483647) {
+        resetTimer = setTimeout(refreshAllowance, wait);
+      }
+    }
+
+    function refreshAllowance() {
+      if (!allowanceUrl || typeof fetch === 'undefined') {
+        return Promise.resolve();
+      }
+      return fetch(allowanceUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (json) {
+          if (json && typeof json.remaining === 'number') {
+            var was = allowance && allowance.remaining <= 0;
+            allowance = { remaining: json.remaining, limit: json.limit, resetTime: json.resetTime || null };
+            sentSinceFetch = 0;
+            renderAllowance();
+            scheduleReset();
+            if (was && allowance.remaining > 0) {
+              announce(allowanceText(allowance));
+            }
+          }
+        })
+        .catch(function () { /* keep the last known number; the server still enforces the limit */ });
+    }
+
     function fields() {
       var profile = form.elements.profileId;
       return {
@@ -622,6 +755,12 @@
       send: xhrSend(form.getAttribute('action'), csrfInput ? csrfInput.value : ''),
       maxBytes: maxBytes,
       onChange: function (item) {
+        if (item.state === 'uploading' && !item.counted) {
+          item.counted = true;
+          sentSinceFetch += 1;
+        } else if (item.state === 'queued') {
+          item.counted = false;
+        }
         renderRow(item);
         scheduleOverall();
         // Instant (client-side) failures are announced together by addFiles().
@@ -630,6 +769,12 @@
         }
       },
       onFinish: function (c) {
+        // Show what is left now that the batch is done, in the summary too.
+        refreshAllowance().then(function () {
+          if (allowance && !summaryBox.hidden) {
+            summaryBox.appendChild(el('p', '', allowanceText(allowance)));
+          }
+        });
         // Bring failures to the top so they are not lost below the fold.
         queue.items().filter(function (it) { return it.state === 'failed'; }).reverse().forEach(function (it) {
           if (rows[it.id]) {
@@ -802,6 +947,7 @@
         summaryBox.hidden = true;
       }
       refreshControls();
+      renderAllowance();
     }
 
     function refreshControls() {
@@ -843,11 +989,52 @@
       summaryBox.focus();
     }
 
+    // Visible note listing the photos that were left out, so none vanish quietly.
+    function showCap(text, left) {
+      if (!capBox) {
+        return;
+      }
+      capBox.textContent = '';
+      capBox.hidden = !text;
+      if (!text) {
+        return;
+      }
+      capBox.appendChild(el('p', '', text));
+      if (left.length) {
+        var ul = el('ul', 'upload-cap-list');
+        left.slice(0, 20).forEach(function (f) { ul.appendChild(el('li', '', f.name || 'photo')); });
+        if (left.length > 20) {
+          ul.appendChild(el('li', '', 'and ' + (left.length - 20) + ' more'));
+        }
+        capBox.appendChild(ul);
+      }
+      if (!left.length) {
+        announce(text);
+      }
+    }
+
     function addFiles(files) {
       if (!files || !files.length) {
         return;
       }
       summaryBox.hidden = true;
+      var capNote = '';
+      if (allowance) {
+        if (room() <= 0) {
+          showCap(allowanceText({ remaining: 0, limit: allowance.limit, resetTime: allowance.resetTime }), []);
+          return;
+        }
+        var cut = capSelection(files, room(), function (f) { return !checkFile(f, maxBytes); });
+        if (cut.left.length) {
+          capNote = capMessage(cut.used, cut.left.length, allowance);
+          showCap(capNote, cut.left);
+        } else {
+          showCap('', []);
+        }
+        files = cut.kept;
+      } else {
+        showCap('', []);
+      }
       var added = queue.add(files, fields());
       var bad = added.filter(function (it) { return it.state === 'failed'; }).length;
       var ok = added.length - bad - added.filter(function (it) { return it.state === 'skipped'; }).length;
@@ -859,7 +1046,7 @@
       if (status) {
         status.textContent = msg;
       }
-      announce(msg + (queue.isRunning() ? '' : ' Select ' + submitBtn.textContent + ' to start.'));
+      announce((capNote ? capNote + ' ' : '') + msg + (queue.isRunning() ? '' : ' Select ' + submitBtn.textContent + ' to start.'));
     }
 
     input.addEventListener('change', function () {
@@ -931,6 +1118,9 @@
       input.focus();
     });
 
+    renderAllowance();
+    scheduleReset();
+
     window.addEventListener('beforeunload', function (e) {
       if (queue.isBusy()) {
         e.preventDefault();
@@ -945,6 +1135,10 @@
     interpretResponse: interpretResponse,
     createQueue: createQueue,
     summarize: summarize,
+    resetPhrase: resetPhrase,
+    allowanceText: allowanceText,
+    capSelection: capSelection,
+    capMessage: capMessage,
     overallText: overallText,
     formatBytes: formatBytes,
     formatEta: formatEta,
