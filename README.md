@@ -10,10 +10,10 @@
      .github/ISSUE_TEMPLATE/config.yml with the real repository (git grep -n OWNER/REPO). -->
 Each deployment can show its own site name: set `APP_NAME` (it defaults to "Cubhouse").
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
-[![Secret scan](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml/badge.svg?branch=beta)](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/UbiquitousKiwi/CubHouse/badge)](https://scorecard.dev/viewer/?uri=github.com/OWNER/REPO)
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg?branch=beta)](https://github.com/Ubiquitouskiwi/CubHouse/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg?branch=beta)](https://github.com/Ubiquitouskiwi/CubHouse/actions/workflows/codeql.yml)
+[![Secret scan](https://github.com/OWNER/REPO/actions/workflows/gitleaks.yml/badge.svg?branch=beta)](https://github.com/Ubiquitouskiwi/CubHouse/actions/workflows/gitleaks.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/UbiquitousKiwi/CubHouse/badge)](https://scorecard.dev/viewer/?uri=github.com/Ubiquitouskiwi/CubHouse)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 ![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange.svg)
 ![Node 20+](https://img.shields.io/badge/node-20%2B-brightgreen.svg)
