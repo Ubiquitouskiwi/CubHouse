@@ -135,6 +135,14 @@ function createRateLimiters({ storeFactory } = {}) {
       keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
       message: 'You have changed settings a lot just now. Please wait a few minutes and try again.',
     }),
+    // "Show" on a masked invitee email, per guardian. Generous for a person
+    // checking a list, a ceiling for a script harvesting addresses.
+    revealEmailLimiter: make('reveal-email', {
+      windowMs: 15 * 60 * 1000,
+      limit: 30,
+      keyGenerator: (req) => `u:${(req.session && req.session.userId) || ipKey(req)}`,
+      message: 'You have shown a lot of email addresses just now. Please wait a few minutes and try again.',
+    }),
     // Invite codes sent by email, per guardian (counted when the guardian
     // asks, including requests still waiting for approval).
     inviteEmailLimiter: make('invite-email', {

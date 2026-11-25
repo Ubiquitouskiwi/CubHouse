@@ -2503,6 +2503,14 @@ button.reaction-chip:hover {
   }
 }
 
+.masked-email {
+  overflow-wrap: anywhere;
+}
+
+.masked-email .link-button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.5rem;
 /* Upload allowance: how many photos can still be added right now. */
 .upload-allowance {
   margin: 0.5rem 0;

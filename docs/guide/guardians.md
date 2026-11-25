@@ -196,7 +196,10 @@ tick **Email the code to the address above**. You can add their first name for t
 
 The email goes out once the code is created: after the other guardian approves, or with one
 guardian, after the 24-hour safety delay. If the request is declined, cancelled or expires, nothing
-is sent. The other guardian sees **Invite code for** the address in their approval list. An emailed
+is sent. The other guardian sees **Invite code for** the address in their approval list. The address is
+masked (for example `g•••@example.com`) until you select **Show** on that row. It hides again after
+about 15 seconds, and each time you show one, it is recorded in the audit trail (who and which row,
+not the address). An emailed
 code is always bound to that address.
 
 The email says who invited them, shows the code in a large box, and has a **Join** button that opens

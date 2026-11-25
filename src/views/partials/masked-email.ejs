@@ -1,0 +1,7 @@
+<%# A masked address with a per-row "Show". The full address is never in this HTML:
+    public/page-behaviors.js fetches it on demand and puts it back after about 15 seconds. %>
+<span class="masked-email" data-email-reveal data-kind="<%= kind %>" data-id="<%= id %>" data-csrf="<%= csrfToken %>">
+  <strong data-email-text><%= masked %></strong>
+  <button type="button" class="link-button" data-email-show aria-label="Show full email address, currently <%= masked %>">Show</button>
+  <span class="sr-only" role="status" aria-live="polite" data-email-status></span>
+</span>
